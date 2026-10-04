@@ -127,8 +127,8 @@ USAGE="
 # Abort because we will not find any of the functions
 # if REMORA_BIN is not defined
 if [[ -z "$REMORA_BIN" ]]; then
-    echo "ERROR: REMORA_BIN undefined"
-    exit
+    echo "ERROR: REMORA_BIN undefined" >&2
+    exit 1
 fi
 
 #Function that tries to exit clean if REMORA is cancelled.
@@ -222,6 +222,7 @@ if [[ "$REMORA_VERBOSE" == "1" ]]; then
 fi
 START=$(date +%s%N)     #Log the start time
 "$@"                    #Run the command !!!
+REMORA_APP_STATUS=$?   #Save before timing, preload restoration or finalization
 END=$(date +%s%N)       #Log the end time
 
 if [[ ! -z $REMORA_PRELOAD ]]; then       #Put back LD_PRELOAD, JIC
@@ -234,4 +235,10 @@ fi
 
 #Once the command has finished, source and execute finalize method
 source $REMORA_BIN/scripts/remora_finalize.sh
-remora_finalize $END $START
+remora_finalize "$END" "$START"
+REMORA_FINALIZE_STATUS=$?
+if [[ "$REMORA_FINALIZE_STATUS" -ne 0 ]]; then
+    printf 'WARNING: REMORA finalization failed (status %s); preserving application exit status %s\n' \
+        "$REMORA_FINALIZE_STATUS" "$REMORA_APP_STATUS" >&2
+fi
+exit "$REMORA_APP_STATUS"

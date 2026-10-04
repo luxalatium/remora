@@ -277,4 +277,6 @@ fi
     rm -f $REMORA_OUTDIR/zz.*
 
     [[ "$REMORA_VERBOSE" == "1" ]] && echo -e "\nREMORA finalize finished"
+    # Optional logging must not report a failure when verbose output is disabled.
+    return 0
 }

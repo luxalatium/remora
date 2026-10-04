@@ -15,7 +15,15 @@ Remora is a tool to monitor runtime resource utilization:
 
 To use the tool, modify your batch script and include 'remora' before your script, executable, or MPI launcher.
 
+## Application exit status
 
+After the application finishes, REMORA runs finalization and exits with the
+application's status. Verbose output does not change that status. If the
+finalizer reports a nonzero status, REMORA prints a warning to stderr while
+preserving the application's result. A missing `REMORA_BIN` is a setup error
+and exits with status 1 before starting the application.
+
+See [local regression tests](tests/README.md) for validation and scope.
 
 ## Download and use
 Please, **do not try to use the version available in the master branch**. We regularly change the code and it might contain bugs. If you want to download and use remora, **have a look at the different tags**. [The most recent release can be found here](https://github.com/TACC/remora/releases/latest).
