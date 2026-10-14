@@ -1,6 +1,10 @@
-# Configurable installer, version 1
+# Configurable Bash installer
 
-Python 3.8+ and Bash are required. This interface checks **installation
+Bash 3.2+, jq 1.6+, and SHA-256 utilities (`sha256sum` or `shasum`) are required.
+Native Linux checks additionally require `setsid` and GNU `timeout`; publication
+uses GNU `mv -T -n` to preserve an unexpectedly created destination. Binutils
+`readelf` is checked when a binary feature needs it. The installer is entirely
+Bash and does not require Python. This interface checks **installation
 capability** on native Linux x86_64/aarch64. It does not launch REMORA, MPI
 applications, GPU probes, sensor access or monitoring workloads. Dependency
 configure scripts may run their own ordinary compiler conftests.
@@ -32,7 +36,8 @@ bash "$source_dir/install.sh" build --plan "$task_dir/build-state/plan.json"
 bash "$source_dir/install.sh" install --plan "$task_dir/build-state/plan.json"
 ```
 
-`python3 -B install.py ...` is equivalent. Commands must succeed in order;
+`install.sh` invokes `installer/cli.sh` and `installer/common.sh` through Bash.
+Commands must succeed in order;
 `configure` with BLOCKED features exits 2, and build refuses a blocked plan.
 There is no automatic fallback to the legacy installer.
 
@@ -115,15 +120,23 @@ does not disable filesystem backends by hostname.
 old/config.json --build-dir NEW --prefix NEW_PREFIX` to reconfigure. Optional
 compiler choices remain optional when a generated config is reused.
 
-`plan.json` contains schema `remora-build-plan/v1`: resolved tools and hashes,
+`plan.json` contains schema `remora-build-plan/v2`: resolved tools and hashes,
 wrapper backend, source/dependency archive hashes, explicit NVML dependency
 hashes, platform, relevant toolchain environment, module statuses, selected
 features, expected artifacts and a plan checksum. This checksum detects
 accidental changes; it is not an authorization/signature mechanism.
 
+V2 seals canonical sorted UTF-8 JSON using jq without a trailing newline.
+Python-generated v1 plans are retained historical evidence and are rejected with
+a reconfigure instruction, because the installer implementation/source and seal
+encoding changed. Their editable `config.json` choices remain reusable through
+`--config` in a new build directory; original plans and evidence are not changed.
+Flags use a Bash quote/backslash tokenizer without `eval`, variable expansion
+or command substitution. JSON config/plan files are never sourced as shell code.
+
 Build/install reject source, recorded environment, tools, explicit dependency
 or platform changes. Implicit system library/header search paths and the full
-transitive toolchain are not completely hermetic in v1; for reproducible GPU
+transitive toolchain are not completely hermetic in this implementation; for reproducible GPU
 builds supply explicit NVML paths and retain the module environment. Runtime
 ABI compatibility remains separate qualification.
 

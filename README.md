@@ -17,12 +17,14 @@ To use the tool, modify your batch script and include 'remora' before your scrip
 
 ## Configurable installation
 
-The first-generation installer supports explicit compiler/MPI/CUDA/NVML
+The Bash installer supports explicit compiler/MPI/CUDA/NVML
 configuration, per-module `on/auto/off` selection, compile/link sanity checks,
 and separate `configure`, `show`, `build`, `install` commands. See the
 [installer guide](docs/installer.md) for examples and compatibility changes.
 Installation readiness is separate from runtime qualification. On HPC, run
 compilation checks and builds in an allocated compute session.
+The installer requires Bash, jq and standard Linux utilities; Python is used
+only by development tests and the optional bundled mpiP 3.4.1 generator.
 
 ## Application exit status
 

@@ -1,7 +1,7 @@
 """Installer contract/failure tests with synthetic tools, not HPC qualification."""
-import contextlib
-import importlib.util
 import io
+import subprocess
+import time
 import json
 import os
 from pathlib import Path
@@ -13,19 +13,29 @@ import unittest
 from unittest.mock import patch
 
 SOURCE = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("remora_install", SOURCE / "install.py")
-installer = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(installer)
+class InstallerData:
+    ARCHIVES = {"mpstat":"extra/sysstat-11.5.3.tar.gz", "mpip":"extra/mpiP-3.4.1.tar.gz"}
+    @staticmethod
+    def registry():
+        return json.loads((SOURCE / "installer/modules.json").read_text())["modules"]
+    @staticmethod
+    def read_plan(path):
+        return json.loads(Path(path).read_text())
+installer = InstallerData()
+
 
 
 class InstallerTests(unittest.TestCase):
+    def assertEqual(self, first, second, msg=None):
+        return super().assertEqual(first, second, msg or getattr(self,"last_output",None))
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="remora installer ")
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.source = self.root / "source"
         self.source.mkdir()
-        for name in ("install.py", "install.sh"):
+        for name in ("install.sh",):
             shutil.copy2(SOURCE / name, self.source / name)
         shutil.copytree(SOURCE / "installer", self.source / "installer")
         shutil.copytree(SOURCE / "src", self.source / "src")
@@ -49,6 +59,8 @@ if args in (["--showme"], ["-show"]):
     print(str(pathlib.Path(__file__).parent / "compiler")); sys.exit(0)
 if args == ["-v"]:
     print("Intel(R) MPI synthetic"); sys.exit(0)
+if "-DSLOW" in args:
+    import time; time.sleep(10)
 if "-DFAIL_NVML" in args and any("nvml.c" in a for a in args):
     print("nvml.h missing", file=sys.stderr); sys.exit(1)
 if pathlib.Path.cwd().name == "build" and (pathlib.Path(__file__).parent / "fail-build").exists():
@@ -80,14 +92,52 @@ if "shared" in args: pathlib.Path("libmpiP.so").write_bytes(header)
         shutil.copy2(self.cc, self.python2)
         self.build = self.root / "build state"
         self.prefix = self.root / "installed version"
-        self.addCleanup(patch.stopall)
-        patch.object(installer, "ROOT", self.source).start()
-        patch.object(installer.platform, "system", return_value="Linux").start()
-        patch.object(installer.platform, "machine", return_value="x86_64").start()
+        self.env = os.environ.copy()
+        self.env["PATH"] = str(self.tools) + os.pathsep + self.env["PATH"]
+        self.env["REMORA_FIXTURE_SYSTEM"] = "Linux"
+        self.uname = self.tools / "uname"
+        self.uname.write_text("#!/bin/sh\nif [ \"$1\" = -s ]; then printf '%s\\n' \"${REMORA_FIXTURE_SYSTEM:-Linux}\"; else echo x86_64; fi\n")
+        self.uname.chmod(0o755)
+        self.setsid = self.tools / "setsid"
+        self.setsid.write_text("#!" + sys.executable + "\nimport os,sys\nos.setsid()\nos.execv(sys.argv[1],sys.argv[1:])\n")
+        self.setsid.chmod(0o755)
+        self.timeout = self.tools / "timeout"
+        self.timeout.write_text("#!" + sys.executable + "\n" + r'''
+import subprocess,sys
+args=sys.argv[1:]
+while args and args[0].startswith("--"): args.pop(0)
+limit=float(args.pop(0)); proc=subprocess.Popen(args)
+try: sys.exit(proc.wait(timeout=limit))
+except subprocess.TimeoutExpired:
+    proc.terminate()
+    try: proc.wait(timeout=3)
+    except subprocess.TimeoutExpired: proc.kill(); proc.wait()
+    sys.exit(124)
+''')
+        self.timeout.chmod(0o755)
+        mv=self.tools/"mv"
+        mv.write_text('''#!/bin/sh
+if [ "$1" = -T ]; then
+  shift; shift; shift
+  if [ -n "${REMORA_PUBLISH_RACE:-}" ] && [ -f "$REMORA_PUBLISH_RACE" ]; then
+    mkdir "$2"; echo original > "$2/keep"; exit 0
+  fi
+  [ ! -e "$2" ] && [ ! -L "$2" ] || exit 0
+fi
+exec /bin/mv "$@"
+''')
+        mv.chmod(0o755)
 
     def invoke(self, args):
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            return installer.main(args)
+        env = os.environ.copy()
+        env.update(self.env)
+        # Let a test inject an actual recorded environment drift.
+        if "CPATH" in os.environ: env["CPATH"] = os.environ["CPATH"]
+        result = subprocess.run(["/bin/bash", str(self.source / "install.sh"), *args],
+                                cwd=self.root, env=env, capture_output=True, text=True)
+        self.last_output = result.stdout + result.stderr
+        if result.returncode not in (0,2,130): print(self.last_output)
+        return result.returncode
 
     def config(self, choices=None, extra=()):
         modes = {name: "off" for name in installer.registry()}
@@ -145,6 +195,58 @@ if "shared" in args: pathlib.Path("libmpiP.so").write_bytes(header)
         self.assertEqual(self.config(extra=["--mpicc", str(self.cc), "--mpifc", str(self.cc)]), 0)
         self.assertEqual(self.plan()["checks"]["mpicc"]["status"], "READY")
         self.assertTrue((self.build / "checks/mpifc-language.f").exists())
+        self.assertIn("include 'mpif.h'",(self.build/"checks/mpifc-language.f").read_text())
+
+    def test_no_python_command_required_by_installer(self):
+        marker=self.root/"python-invoked"
+        self.env["REMORA_PYTHON_FORBIDDEN_MARKER"]=str(marker)
+        for name in ("python","python3"):
+            stub=self.tools/name
+            stub.write_text('#!/bin/sh\necho forbidden > "$REMORA_PYTHON_FORBIDDEN_MARKER"\nexit 99\n')
+            stub.chmod(0o755)
+        self.assertEqual(self.config(),0)
+        self.build_install()
+        self.assertFalse(marker.exists())
+        self.assertFalse((SOURCE/"install.py").exists())
+
+    def test_flags_quote_spaces_without_shell_evaluation(self):
+        marker=self.root/"must-not-exist"
+        literal="$(touch "+str(marker)+")"
+        value='-DNAME="hello world" -DLITERAL=\''+literal+"'"
+        self.assertEqual(self.config(extra=["--cflags="+value]),0)
+        command=json.loads((self.build/"checks/logs/cc-language.json").read_text())["command"]
+        self.assertIn("-DNAME=hello world",command)
+        self.assertIn("-DLITERAL="+literal,command)
+        self.assertFalse(marker.exists())
+
+    def test_unicode_paths_and_json_seal_roundtrip(self):
+        self.build=self.root/"編譯紀錄"
+        self.prefix=self.root/"安裝版本"
+        self.assertEqual(self.config(),0)
+        self.assertEqual(self.invoke(["show","--plan",str(self.build/"plan.json")]),0)
+        self.build_install()
+
+    def test_old_python_plan_requires_reconfigure(self):
+        self.assertEqual(self.config(),0)
+        path=self.build/"plan.json"; data=json.loads(path.read_text())
+        data["schema"]="remora-build-plan/v1"; path.write_text(json.dumps(data))
+        self.assertEqual(self.invoke(["show","--plan",str(path)]),2)
+        self.assertIn("configure again",self.last_output)
+
+    def test_source_alias_cannot_receive_build_output(self):
+        alias=self.root/"source-alias"; alias.symlink_to(self.source/"src",target_is_directory=True)
+        self.build=alias/"new-work"
+        self.assertEqual(self.config(),2)
+        self.assertFalse(self.build.exists())
+
+    def test_prefix_created_during_publish_is_preserved(self):
+        self.env["REMORA_PUBLISH_RACE"]=str(self.root/"race-marker")
+        self.assertEqual(self.config(),0)
+        self.assertEqual(self.invoke(["build","--plan",str(self.build/"plan.json")]),0)
+        (self.root/"race-marker").touch()
+        self.assertEqual(self.invoke(["install","--plan",str(self.build/"plan.json")]),2)
+        self.assertEqual((self.prefix/"keep").read_text(),"original\n")
+        self.assertTrue(list(self.prefix.parent.glob("."+self.prefix.name+".staging-*")))
 
     def test_required_mpip_does_not_silently_disable(self):
         self.assertEqual(self.config({"mpip": "on"}, ["--mpicc", str(self.cc)]), 2)
@@ -210,14 +312,14 @@ if "shared" in args: pathlib.Path("libmpiP.so").write_bytes(header)
         self.assertEqual(before, (self.build / "plan.json").read_bytes())
 
     def test_non_linux_is_blocked(self):
-        with patch.object(installer.platform, "system", return_value="Darwin"):
-            self.assertEqual(self.config(), 2)
-            self.assertEqual(self.plan()["checks"]["base-scripts"]["status"], "BLOCKED")
+        self.env["REMORA_FIXTURE_SYSTEM"] = "Darwin"
+        self.assertEqual(self.config(), 2)
+        self.assertEqual(self.plan()["checks"]["base-scripts"]["status"], "BLOCKED")
 
     def test_dependency_failure_propagates(self):
-        with patch.object(installer, "dependency_build", side_effect=installer.InstallError("F77 symbols failed")):
-            self.assertEqual(self.config({"mpstat": "on"}), 2)
-            self.assertIn("F77 symbols", self.plan()["modules"]["mpstat"]["reason"])
+        self.dependency_fixture("mpstat", configure_exit=7)
+        self.assertEqual(self.config({"mpstat":"on"}),2)
+        self.assertIn("mpstat-configure failed",self.plan()["modules"]["mpstat"]["reason"])
 
     def dependency_fixture(self, name, configure_exit=0):
         directory = self.root / (name + "-fixture")
@@ -283,8 +385,10 @@ if "shared" in args: pathlib.Path("libmpiP.so").write_bytes(header)
     def test_failed_destination_copy_preserves_existing_state(self):
         self.assertEqual(self.config(), 0)
         self.assertEqual(self.invoke(["build", "--plan", str(self.build / "plan.json")]), 0)
-        with patch.object(installer.shutil, "copytree", side_effect=OSError("injected copy failure")):
-            self.assertEqual(self.invoke(["install", "--plan", str(self.build / "plan.json")]), 2)
+        cp = self.tools / "cp"
+        cp.write_text("#!/bin/sh\nfor arg do case $arg in *.staging-*) exit 8;; esac; done\nexec /bin/cp \"$@\"\n")
+        cp.chmod(0o755)
+        self.assertEqual(self.invoke(["install", "--plan", str(self.build / "plan.json")]), 2)
         self.assertFalse(self.prefix.exists())
         self.assertTrue(list(self.prefix.parent.glob("." + self.prefix.name + ".staging-*")))
         self.assertFalse((self.prefix.parent / ("." + self.prefix.name + ".install-lock")).exists())
@@ -294,27 +398,35 @@ if "shared" in args: pathlib.Path("libmpiP.so").write_bytes(header)
         self.assertEqual(self.config(), 2)
         self.assertFalse(self.build.exists())
 
-    def test_interruption_returns_130_and_restores_handler(self):
-        import signal
-        previous = signal.getsignal(signal.SIGTERM)
-        with patch.object(installer, "configure", side_effect=KeyboardInterrupt):
-            self.assertEqual(self.config(), 130)
-        self.assertEqual(signal.getsignal(signal.SIGTERM), previous)
+    def test_interruption_returns_130_and_preserves_receipt(self):
+        args = ["/bin/bash", str(self.source / "install.sh"), "configure", "--build-dir",str(self.build),
+                "--prefix",str(self.prefix),"--cc",str(self.cc),"--readelf",str(self.readelf),"--cflags=-DSLOW"]
+        proc = subprocess.Popen(args, cwd=self.root,env=self.env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda: proc.kill() if proc.poll() is None else None)
+        receipt=self.build / "checks/logs/cc-language.json"
+        deadline=time.monotonic()+8
+        while not receipt.exists() and proc.poll() is None and time.monotonic()<deadline: time.sleep(.02)
+        self.assertTrue(receipt.exists())
+        proc.terminate()
+        self.assertEqual(proc.wait(timeout=8),130)
+        self.assertEqual(json.loads(receipt.read_text())["exit_code"],130)
+        self.assertFalse(self.prefix.exists())
 
     def test_timeout_recorded(self):
-        with self.assertRaises(installer.InstallError):
-            installer.run([sys.executable, "-c", "import time; time.sleep(60)"], self.root,
-                          self.root / "logs", "timeout", timeout=0.05)
-        self.assertIsNotNone(json.loads((self.root / "logs/timeout.json").read_text())["exit_code"])
+        script='source "$1"; SETSID="$2"; TIMEOUT="$3"; run "$4" "$4/logs" timeout 0.05 "$5" -c "import time; time.sleep(60)"'
+        result=subprocess.run(["/bin/bash","-c",script,"test",str(self.source/"installer/common.sh"),
+                               str(self.setsid),str(self.timeout),str(self.root),sys.executable],env=self.env,capture_output=True)
+        self.assertNotEqual(result.returncode,0)
+        self.assertEqual(json.loads((self.root/"logs/timeout.json").read_text())["exit_code"],124)
 
     def test_archive_traversal_rejected(self):
-        archive = self.root / "bad.tar"
-        with tarfile.open(archive, "w") as tar:
-            member = tarfile.TarInfo("../escape"); member.size = 1
-            tar.addfile(member, io.BytesIO(b"x"))
-        with self.assertRaises(installer.InstallError):
-            installer.extract(archive, self.root / "extract")
-        self.assertFalse((self.root / "escape").exists())
+        archive=self.source / installer.ARCHIVES["mpstat"]
+        with tarfile.open(archive,"w:gz") as tar:
+            member=tarfile.TarInfo("../escape"); member.size=1
+            tar.addfile(member,io.BytesIO(b"x"))
+        self.assertEqual(self.config({"mpstat":"on"}),2)
+        self.assertFalse((self.build/"checks/escape").exists())
+        self.assertIn("unsafe",self.plan()["modules"]["mpstat"]["reason"])
 
 
 if __name__ == "__main__":
