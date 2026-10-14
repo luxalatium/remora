@@ -15,6 +15,15 @@ Remora is a tool to monitor runtime resource utilization:
 
 To use the tool, modify your batch script and include 'remora' before your script, executable, or MPI launcher.
 
+## Configurable installation
+
+The first-generation installer supports explicit compiler/MPI/CUDA/NVML
+configuration, per-module `on/auto/off` selection, compile/link sanity checks,
+and separate `configure`, `show`, `build`, `install` commands. See the
+[installer guide](docs/installer.md) for examples and compatibility changes.
+Installation readiness is separate from runtime qualification. On HPC, run
+compilation checks and builds in an allocated compute session.
+
 ## Application exit status
 
 After the application finishes, REMORA runs finalization and exits with the

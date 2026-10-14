@@ -1,0 +1,5 @@
+{
+  "tools": {"cc": "gcc"},
+  "flags": {"cflags": "-O2"},
+  "modules": {"mpstat": "on", "cpu": "on", "memory": "on", "mpip": "off", "gpu": "off"}
+}

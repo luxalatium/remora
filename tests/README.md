@@ -1,4 +1,4 @@
-# Local lifecycle regression tests
+# Local regression tests
 
 From the repository root, run with Python 3.6+ and Bash:
 
@@ -6,7 +6,7 @@ From the repository root, run with Python 3.6+ and Bash:
 python3 -B -m unittest discover -s tests -p 'test_*.py'
 ```
 
-The tests run the real `src/remora` entrypoint in temporary directories with
+The lifecycle tests run the real `src/remora` entrypoint in temporary directories with
 mock initialization, collection, node lists and external operations. Tests
 cover both a configurable finalizer stub and the real finalizer with mocked
 SSH, file cleanup and reporting. No installer, actual collector, scheduler,
@@ -28,3 +28,11 @@ status. The SIGTERM test targets only the child launched by the test.
 To test a saved source revision without changing this checkout, set
 `REMORA_TEST_SOURCE_ROOT` to an extracted source tree containing `src/remora`
 and `src/scripts/remora_finalize.sh`. Keep the tests from the current checkout.
+
+`test_installer.py` tests the configurable installer with synthetic compilers,
+readelf/make tools and dependency archives. Coverage includes required/optional
+features, MPI static/shared build stages, missing headers, dependency configure
+failures, compiler/source/environment/plan drift, native architecture checks,
+artifact tampering, interruption, timeout, archive traversal and installation
+without overwriting an existing prefix. These tests never run linked probe or
+collector binaries and are not native dependency or HPC qualification.

@@ -1,0 +1,20 @@
+{
+  "schema": "remora-install-modules/v1",
+  "modules": {
+    "mpstat": {"default": "on", "kind": "sysstat", "requires": [], "artifacts": ["bin/mpstat"]},
+    "cpu": {"default": "on", "kind": "collector", "requires": ["mpstat"], "entry": "cpu,CPU"},
+    "memory": {"default": "on", "kind": "collector", "requires": [], "entry": "memory,MEMORY"},
+    "numa": {"default": "auto", "kind": "collector", "requires": [], "entry": "numa,NUMA"},
+    "eth": {"default": "auto", "kind": "collector", "requires": [], "entry": "eth,NETWORK"},
+    "ib": {"default": "auto", "kind": "collector", "requires": [], "entry": "ib,NETWORK"},
+    "opa": {"default": "off", "kind": "collector", "requires": [], "entry": "opa,NETWORK"},
+    "power": {"default": "auto", "kind": "collector", "requires": [], "entry": "power,POWER"},
+    "temperature": {"default": "auto", "kind": "collector", "requires": [], "entry": "temperature,TEMPERATURE"},
+    "gpu": {"default": "auto", "kind": "nvml", "requires": [], "entry": "gpu,MEMORY", "artifacts": ["bin/binary_data_collectors/data_collect_gpu"]},
+    "mpip": {"default": "auto", "kind": "mpip", "requires": [], "entry": "impi_mpip,MPI", "artifacts": ["lib/libmpiP.a", "lib/libmpiP.so"]},
+    "network": {"default": "auto", "kind": "shell", "requires": [], "entry": "network,NETWORK"},
+    "lustre": {"default": "off", "kind": "shell", "requires": [], "entry": "lustre,IO"},
+    "lnet": {"default": "off", "kind": "shell", "requires": [], "entry": "lnet,IO"},
+    "dvs": {"default": "off", "kind": "shell", "requires": [], "entry": "dvs,IO"}
+  }
+}
