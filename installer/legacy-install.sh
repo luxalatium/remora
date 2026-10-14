@@ -83,24 +83,24 @@ export CC=mpicc
 export F77=mpif77
 export ARCH=x86_64
 
-if [[ "$( $CC --version > /dev/null 2>&1 || echo "0")" == "0" ]]; then 
+if [[ "$( $CC --version > /dev/null 2>&1 || echo "0")" == "0" ]]; then
     haveMPICC=0
-else 
+else
     haveMPICC=1
 fi
 
 if [[ "$( $F77 --version > /dev/null 2>&1 || echo "0")" == "0" ]]; then
      haveMPIFC=0
-else 
-     haveMPIFC=1 
+else
+     haveMPIFC=1
 fi
 
 if [[ $haveMPICC == 1 ]] && [[ $haveMPIFC == 1 ]]; then
 
-   mpicc -v 2>/dev/null | grep 'Intel(R) MPI' > /dev/null 2>&1 
+   mpicc -v 2>/dev/null | grep 'Intel(R) MPI' > /dev/null 2>&1
    haveIMPI=$((1-${PIPESTATUS[1]}))           #1=has IMPI, 0=does not have IMPI
 
-   mpicc -v 2>/dev/null | grep 'MVAPICH2'     > /dev/null 2>&1 
+   mpicc -v 2>/dev/null | grep 'MVAPICH2'     > /dev/null 2>&1
    haveMV2=$((1-${PIPESTATUS[1]}))            #1=has MVAPICH2, 0=does not have MV2
 
    if [[ $haveIMPI == 1 ]]; then
@@ -110,7 +110,7 @@ if [[ $haveMPICC == 1 ]] && [[ $haveMPIFC == 1 ]]; then
       else
          IMPI_stats=impi
       fi
-      #mpicc -v |& grep 'MPI Library 2019' > /dev/null 2>&1 
+      #mpicc -v |& grep 'MPI Library 2019' > /dev/null 2>&1
       #haveIMPI19=$((1-${PIPESTATUS[1]}))      #1=has IMPI 19, 0=does not have IMPI 19
    fi
 else
@@ -137,7 +137,7 @@ if [[ "$haveMPICC" == "1" ]] && [[ "$haveMPIFC"  == "1" ]]; then
       tar xzvf ${mpipfile}
       [[ -f ./extra/mpiP-3.4.1/make-wrappers.py ]] && sed -i 's@#!/usr/local/bin/python@#!/usr/bin/python2@' ./extra/mpiP-3.4.1/make-wrappers.py
 
-      [[ $(hostname -f) =~ ".ls6.tacc" ]] && 
+      [[ $(hostname -f) =~ ".ls6.tacc" ]] &&
          sed -i 's/PYTHON  = python$/PYTHON  = python2/'         ./mpiP-3.4.1/Defs.mak.in &&
          sed -i 's/PYTHON  = python$/PYTHON  = python2/'         ./mpiP-3.4.1/Defs.mak    &&    #preserved across install.sh executions
          sed -i 's@#!/usr/local/bin/python@#!/usr/bin/python2@'  ./mpiP-3.4.1/make-wrappers.py
@@ -152,13 +152,13 @@ if [[ "$haveMPICC" == "1" ]] && [[ "$haveMPIFC"  == "1" ]]; then
    fi
 
    if [[ "$IMPI_stats" == "impi" ]]; then
-      echo "" 
+      echo ""
       echo " REMORA built with support for impi (ipm) statistics" | tee -a $BUILD_LOG
       echo ""
    fi
 
    if [[ "$haveMV2" == "0" ]] && [[ "$haveIMPI" == "0" ]]; then
-      echo "" 
+      echo ""
       echo " REMORA only supports statistics for IMPI and MVAPICH2"          | tee -a $BUILD_LOG
       echo " WARNING : REMORA will be built with NO MPI statistics support " | tee -a $BUILD_LOG
       echo ""
@@ -204,7 +204,7 @@ else
 fi
 
 if [[ "$haveMPICC" == "1" ]] && [[ "$haveMPIFC" == "1" ]]; then
-   /sbin/lsmod | grep hfi1 > /dev/null 2>&1 
+   /sbin/lsmod | grep hfi1 > /dev/null 2>&1
    if [[ $? == 0 ]]; then
       sed -i 's/ib,NETWORK/opa,NETWORK/' $REMORA_DIR/bin/config/modules
    fi
