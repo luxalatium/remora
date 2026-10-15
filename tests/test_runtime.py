@@ -60,6 +60,10 @@ class RuntimeTests(unittest.TestCase):
                      "100 1 2\n101 3\n", "100 1 2\n101 -1 4\n"]:
             self.assertNotEqual(self.validate(text), 0, text)
 
+    def test_bc_leading_decimal_output_is_numeric(self):
+        self.assertEqual(self.validate("TIME A B\n.069 53579.85 59262.31\n1.146 50129.22 47672.01\n"), 0)
+        self.assertNotEqual(self.validate("TIME A B\n.069 1 2\n1.146 . 2\n"), 0)
+
     def test_cpu_labels_are_not_parsed_as_numbers(self):
         block = "%time {time}\n%usr 1 2\n%sys 3 4\n%idle 96 94\n"
         self.assertEqual(self.validate(block.format(time=100) + block.format(time=101), cpu=1), 0)

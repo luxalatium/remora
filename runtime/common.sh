@@ -80,7 +80,7 @@ snapshot() {
 validate_raw() {
     local file=$1 width=$2 minimum=$3 cpu=$4
     awk -v width="$width" -v minimum="$minimum" -v cpu="$cpu" '
-      function number(x) { return x ~ /^[-+]?[0-9]+([.][0-9]*)?([eE][-+]?[0-9]+)?$/ }
+      function number(x) { return x ~ /^[-+]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][-+]?[0-9]+)?$/ }
       NF == 0 { next }
       cpu && $1 == "%time" {
           if (blocks && groups != 3) bad=1

@@ -56,3 +56,11 @@ At least three observations with increasing timestamps and finite numeric data
 are required for time-series collectors. Header-only output and exit-zero/no-data
 are failures. Backend prerequisites and schema checks are module-specific. Saved
 OS/device observations are independent evidence, not REMORA self-validation.
+
+HPC follow-up: Bash `bc` legitimately emits leading-decimal numbers such as `.069`.
+The raw validator accepts those; the initial bbfbda7 SKX power schema failure is
+superseded by replay validation, with original results retained. Legacy shell RAPL
+power nevertheless has a separate derived unit defect: microjoules divided by
+1000 and seconds produces milliwatts while the output says watts, and its TIME(ms)
+column holds seconds. Stage two reports availability PASS and correctness FAIL
+when that RAPL branch was actually selected. No producer unit conversion is changed.

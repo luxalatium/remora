@@ -212,6 +212,9 @@ done
 # A bounded smoke is not a numerical-accuracy claim. Preserve known unit defects.
 if [[ $MODULE == gpu && $IMPLEMENTATION == shell ]]; then
     result FAIL 'available, but shell module divides nvidia-smi MiB by 1000 and labels GB; decimal GB needs MiB*1048576/1e9' PASS FAIL DERIVED
+elif [[ $MODULE == power && $IMPLEMENTATION == shell ]] &&
+    grep -q '^export REMORA_POWER_COLLECTOR=intel_rapl$' "$CASE/out/remora_env.txt"; then
+    result FAIL 'available, but legacy RAPL shell divides microjoules by 1000 then by seconds, overstating watts by 1000; TIME(ms) contains seconds' PASS FAIL DERIVED
 elif [[ $MODULE == ib || $MODULE == opa ]]; then
     result FAIL 'available, but port_*_data counters are four-octet units and legacy output treats them as bytes' PASS FAIL DERIVED
 else
