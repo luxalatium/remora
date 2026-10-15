@@ -2,6 +2,7 @@
   File: collect_power.c
 */
 
+#include "remora_state.h"
 #include <dirent.h>
 #include <malloc.h>
 #include <stdbool.h>

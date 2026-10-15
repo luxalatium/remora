@@ -137,6 +137,7 @@ class RuntimeTests(unittest.TestCase):
     def test_state_files_use_supplied_tmpdir(self):
         for name in ["cpu", "eth", "ib", "memory", "opa", "power"]:
             source = (SOURCE / "src/C_data_collectors_src" / f"data_collect_{name}.c").read_text()
+            self.assertIn('#include "remora_state.h"', source)
             self.assertNotIn(f'fopen("/dev/shm/remora_{name}.tmp"', source)
             self.assertEqual(source.count(f'remora_open_state(argv[3], "remora_{name}.tmp"'), 2)
         self.assertNotIn("du /dev/shm", (SOURCE / "src/modules/memory").read_text())
