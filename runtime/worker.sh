@@ -60,7 +60,7 @@ case $MODULE in
     numa)
         require_tool numastat
         if [[ $IMPLEMENTATION == collector ]]; then
-            count=$(numastat -m | awk '/Node [0-9]/ {print NF/2; exit}')
+            count=$(numastat -m | numa_node_count)
             [[ $count == 2 ]] || blocked "legacy C NUMA layout is fixed to two nodes; observed ${count:-unknown}; do not risk its fixed-size arrays"
         fi
         ;;

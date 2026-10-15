@@ -114,6 +114,15 @@ class RuntimeTests(unittest.TestCase):
         names = json.loads((SOURCE / "installer/modules.json").read_text())["modules"]
         self.assertEqual(set(names), {p.stem for p in (SOURCE / "runtime/modules").glob("*.sh")})
 
+    def test_numa_header_total_column_is_not_a_node(self):
+        for nodes in (2, 4, 34):
+            header = " ".join(f"Node {i}" for i in range(nodes)) + " Total\n"
+            run = subprocess.run(
+                ["/bin/bash", "-c", 'source "$1"; numa_node_count', "bash", str(SOURCE / "runtime/common.sh")],
+                input=header, capture_output=True, text=True, env=self.env,
+            )
+            self.assertEqual(run.stdout.strip(), str(nodes))
+
     def test_state_files_use_supplied_tmpdir(self):
         for name in ["cpu", "eth", "ib", "memory", "opa", "power"]:
             source = (SOURCE / "src/C_data_collectors_src" / f"data_collect_{name}.c").read_text()

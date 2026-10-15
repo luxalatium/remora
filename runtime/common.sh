@@ -44,6 +44,15 @@ require_file() {
     [[ -r $1 ]] || blocked "backend is not readable: $1"
 }
 
+numa_node_count() {
+    awk '/Node [0-9]/ {
+        count=0
+        for (i=1;i<NF;i++) if ($i=="Node" && $(i+1) ~ /^[0-9]+$/) count++
+        print count
+        exit
+    }'
+}
+
 # Raw observations are saved without changing counters, services or permissions.
 snapshot() {
     local label=$1 path
