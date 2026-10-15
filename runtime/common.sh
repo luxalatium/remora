@@ -14,15 +14,18 @@ hash_file() {
 result() {
     local status=$1 reason=$2 availability=${3:-$1} correctness=${4:-NOT_RUN}
     local correctness_claim=${5:-OBSERVED}
-    jq -n --arg module "$MODULE" --arg implementation "$IMPLEMENTATION" \
+    jq -n --arg module_name "$MODULE" --arg implementation "$IMPLEMENTATION" \
         --arg status "$status" --arg reason "$reason" --arg availability "$availability" \
         --arg correctness "$correctness" --arg node "$NODE" --arg artifact "${ARTIFACT:-}" \
         --arg hash "${ARTIFACT_HASH:-}" --arg scope availability_smoke --arg correctness_claim "$correctness_claim" \
-        '{schema:"remora-runtime-check/v1",module:$module,implementation:$implementation,
+        '{schema:"remora-runtime-check/v1","module":$module_name,implementation:$implementation,
           status:$status,reason:$reason,availability:$availability,correctness:$correctness,
           node:$node,artifact:$artifact,artifact_sha256:$hash,qualification_scope:$scope,
           availability_claim_class:"OBSERVED",correctness_claim_class:$correctness_claim}' \
-        > "$CASE/result.json"
+        > "$CASE/result.json" || {
+        printf "Cannot serialize runtime result; partial evidence retained\n" >&2
+        exit 2
+    }
 }
 
 blocked() {

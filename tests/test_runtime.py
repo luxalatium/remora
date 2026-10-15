@@ -107,6 +107,13 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(self.case()["status"], "FAIL")
         self.assertEqual(self.case()["exit_code"], 124)
 
+    def test_result_serializer_failure_cannot_be_success(self):
+        jq = self.fixture.tools / "jq"
+        jq.write_text('#!/bin/sh\nexit 3\n')
+        jq.chmod(0o755)
+        self.assertEqual(self.run_check().returncode, 2)
+        self.assertFalse((self.output / "summary.json").exists())
+
     def test_output_cannot_overwrite_existing_evidence(self):
         self.output.mkdir()
         marker = self.output / "keep"

@@ -64,3 +64,9 @@ power nevertheless has a separate derived unit defect: microjoules divided by
 1000 and seconds produces milliwatts while the output says watts, and its TIME(ms)
 column holds seconds. Stage two reports availability PASS and correctness FAIL
 when that RAPL branch was actually selected. No producer unit conversion is changed.
+
+Vista follow-up: site jq 1.5 treats `module` as a reserved token. Result JSON uses
+quoted keys and an unreserved variable name. JSON serialization failures and an
+incomplete case set stop with exit2; an empty summary cannot imply a passing
+runtime test. Initial Vista GG bbfbda7 results have an empty case list and are
+BLOCKED by the checker compatibility defect, irrespective of their old exit0.

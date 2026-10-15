@@ -99,7 +99,7 @@ for MODULE in "${MODULES[@]}"; do
         CASE="$OUTPUT/$MODULE/$IMPLEMENTATION"
         mkdir -p -- "$CASE"
         argv=(bash "$ROOT/worker.sh" "$MODULE" "$IMPLEMENTATION" "$PREFIX" "$CASE" "$SAMPLES" "$INTERVAL" "$MPI_PROBE")
-        jq -n --argjson limit "$LIMIT" --args '{timeout_seconds:$limit,command:$ARGS.positional}' -- "${argv[@]}" > "$CASE/command.json"
+        jq -n --argjson limit "$LIMIT" --args '{timeout_seconds:$limit,command:$ARGS.positional}' -- "${argv[@]}" > "$CASE/command.json" || exit 2
         printf '[runtime] %s/%s: checking\n' "$MODULE" "$IMPLEMENTATION"
         INTERRUPT_PENDING=0
         trap 'INTERRUPT_PENDING=1' INT TERM
@@ -119,12 +119,15 @@ for MODULE in "${MODULES[@]}"; do
         elif [[ ! -s $CASE/result.json ]]; then
             result FAIL 'worker exited zero without a result'
         fi
-        jq --argjson rc "$rc" '. + {exit_code:$rc}' "$CASE/result.json" > "$CASE/result.tmp" && mv -- "$CASE/result.tmp" "$CASE/result.json"
+        jq -e '.schema=="remora-runtime-check/v1" and
+            (.status=="PASS" or .status=="FAIL" or .status=="SKIP" or .status=="BLOCKED")' "$CASE/result.json" > /dev/null || exit 2
+        jq --argjson rc "$rc" '. + {exit_code:$rc}' "$CASE/result.json" > "$CASE/result.tmp" && mv -- "$CASE/result.tmp" "$CASE/result.json" || exit 2
         printf '[runtime] %s/%s: %s\n' "$MODULE" "$IMPLEMENTATION" "$(jq -r '.status+" - "+.reason' "$CASE/result.json")"
     done
 done
-jq -s '{schema:"remora-runtime-summary/v1",cases:.,
+jq -s --argjson expected "$((${#MODULES[@]} * ${#IMPLEMENTATIONS[@]}))" '
+    if length != $expected then error("incomplete runtime case set") else {schema:"remora-runtime-summary/v1",cases:.,
     status:(if any(.[];.status=="FAIL") then "FAIL" elif any(.[];.status=="BLOCKED") then "BLOCKED"
-    elif any(.[];.status=="PASS") then "PASS" else "SKIP" end)}' "$OUTPUT"/*/*/result.json > "$OUTPUT/summary.json"
+    elif any(.[];.status=="PASS") then "PASS" else "SKIP" end)} end' "$OUTPUT"/*/*/result.json > "$OUTPUT/summary.json" || exit 2
 printf '[runtime] Summary: %s\n' "$OUTPUT/summary.json"
 case $(jq -r .status "$OUTPUT/summary.json") in FAIL) exit 1 ;; BLOCKED) exit 2 ;; *) exit 0 ;; esac
