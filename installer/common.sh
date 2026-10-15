@@ -316,7 +316,7 @@ source_manifest() {
     local output=$1 listing="$1.paths.$$" path
     : > "$listing" || return 1
     printf '%s\0' "$ROOT/install.sh" >> "$listing"
-    for path in installer src docs; do
+    for path in installer runtime src docs; do
         [[ -z $(find "$ROOT/$path" -type l -print -quit) ]] || {
             error 'source symlinks are not supported'
             return 1

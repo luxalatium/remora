@@ -38,6 +38,7 @@ class InstallerTests(unittest.TestCase):
         for name in ("install.sh",):
             shutil.copy2(SOURCE / name, self.source / name)
         shutil.copytree(SOURCE / "installer", self.source / "installer")
+        shutil.copytree(SOURCE / "runtime", self.source / "runtime")
         shutil.copytree(SOURCE / "src", self.source / "src")
         (self.source / "docs").mkdir()
         for name in ("modules_help", "modules_whatis", "remora_user_guide.pdf"):

@@ -192,7 +192,7 @@ configure() {
     [[ -n $BUILD_DIR ]] || fatal '--build-dir is required'
     BUILD_DIR=$(absolute "$BUILD_DIR") || fatal 'invalid build path'
     [[ ! -e $BUILD_DIR && ! -L $BUILD_DIR ]] || fatal 'build directory must be new; use a separate directory for reconfigure'
-    for path in src docs extra installer; do
+    for path in src docs extra installer runtime; do
         [[ $BUILD_DIR != "$ROOT/$path" && $BUILD_DIR != "$ROOT/$path/"* ]] || fatal 'build directory cannot be inside source/dependency directories'
     done
     mkdir -p -- "$BUILD_DIR" && chmod 700 "$BUILD_DIR" || fatal 'cannot create build directory'
@@ -368,7 +368,7 @@ configure() {
     jq -n --slurpfile modules "$MODULES" --slurpfile registry "$REGISTRY" \
         '[$registry[0].modules|keys_unsorted[] | select($modules[0][.].status=="READY")]' > "$WORK/selected.json" || fatal 'cannot resolve selected modules'
     jq -n --slurpfile selected "$WORK/selected.json" --slurpfile registry "$REGISTRY" '
-      (["bin/remora","bin/config/modules"] + [$selected[0][] as $k | $registry[0].modules[$k] |
+      (["bin/remora","bin/config/modules","bin/runtime/check.sh","bin/runtime/worker.sh","bin/runtime/common.sh"] + [$selected[0][] as $k | $registry[0].modules[$k] |
         ((.artifacts//[])[]), (if .kind=="collector" then "bin/binary_data_collectors/data_collect_"+$k else empty end),
         (if .entry then "bin/modules/"+(.entry|split(",")[0]) else empty end)] | unique)' > "$WORK/expected.json" || fatal 'artifact contract failed'
     status=READY
@@ -452,6 +452,7 @@ build_plan() {
     RESULT_FILE="$WORK/result.json"
     jq '{schema:"remora-build-result/v1",plan_sha256:.plan_sha256,status:"FAIL",modules:(.selected|map({key:.,value:"NOT_RUN"})|from_entries)}' "$PLAN" > "$RESULT_FILE" || fatal 'cannot record build result'
     mkdir -p -- "$stage/bin" "$stage/docs" || fatal 'cannot create staged layout'
+    cp -Rp -- "$ROOT/runtime" "$stage/bin/runtime" || fatal 'cannot stage runtime checks'
     progress "Preparing staged scripts and documentation: $stage"
     for source in "$ROOT/src"/*; do
         case ${source##*/} in

@@ -45,8 +45,9 @@ collect_data_memory()
     USER=`whoami`
 
     # Get space used in /dev/shm
-    shmem_used=`du /dev/shm 2>/dev/null | tail -n 1 | awk '{print $1} '`
-    shmem=$(echo "scale=4; $shmem_used/(1024*1024)" | bc)
+    # Filesystem usage avoids recursively scanning other runs' shared-memory files.
+    shmem_used=$(df -B1 --output=used /dev/shm | awk 'NR==2 {print $1}')
+    shmem=$(echo "scale=4; $shmem_used/(1024*1024*1024)" | bc)
 
     MEM_PID=(); idx=0
     for i in `ps -u $USER -o pid=`; do MEM_PID[$idx]=$i; idx=$((idx+1)); done

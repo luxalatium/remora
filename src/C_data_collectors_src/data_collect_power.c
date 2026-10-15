@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
   size_t line_buf_size = 0;
 
   FILE *file;
-  file = fopen("/dev/shm/remora_power.tmp","r");
+  file = remora_open_state(argv[3], "remora_power.tmp", "r");
 
   bool is_tmp_file_exists = false;
   int n_nodes = 0;
@@ -153,7 +153,11 @@ int main(int argc, char *argv[])
   for (int i = 0; i < n_sockets; i++)
     energy_list_diff[i] /= (time_new - time_old);
 
-  file = fopen("/dev/shm/remora_power.tmp","w");
+  file = remora_open_state(argv[3], "remora_power.tmp", "w");
+  if (file == NULL) {
+    perror("Cannot open run-local collector state");
+    return EXIT_FAILURE;
+  }
   fprintf(file, "%.9f ", time_new);
 
   for (int i = 0; i < n_sockets; i++) {

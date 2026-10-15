@@ -10,6 +10,7 @@
 #include <pwd.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "remora_state.h"
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -46,7 +47,7 @@ int main(int argc, char *argv[])
   bool is_tmp_file_exists = false;
 
   FILE *file = NULL;
-  file = fopen("/dev/shm/remora_memory.tmp","r");
+  file = remora_open_state(argv[3], "remora_memory.tmp", "r");
 
   if (file != NULL)  {
 
@@ -214,7 +215,11 @@ int main(int argc, char *argv[])
   rmem_max = (vmrss_gb  > rmem_max) ? vmrss_gb  : rmem_max;
   tmem_max = (mem_t_gb  > tmem_max) ? mem_t_gb  : tmem_max;
 
-  file = fopen("/dev/shm/remora_memory.tmp","w");
+  file = remora_open_state(argv[3], "remora_memory.tmp", "w");
+  if (file == NULL) {
+    perror("Cannot open run-local collector state");
+    return EXIT_FAILURE;
+  }
   fprintf(file, "%.6f ",  time_new);
   fprintf(file, "%.6f ",  vmem_max);
   fprintf(file, "%.6f ",  rmem_max);

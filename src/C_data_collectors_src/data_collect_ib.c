@@ -6,6 +6,7 @@
 #include <malloc.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "remora_state.h"
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -110,7 +111,7 @@ int main(int argc, char *argv[])
   bool is_tmp_file_exists = false;
 
   FILE *file = NULL;
-  file = fopen("/dev/shm/remora_ib.tmp","r");
+  file = remora_open_state(argv[3], "remora_ib.tmp", "r");
 
   if (file != NULL)  {
 
@@ -235,7 +236,11 @@ int main(int argc, char *argv[])
 
   // Update tmp file
 
-  file = fopen("/dev/shm/remora_ib.tmp","w");
+  file = remora_open_state(argv[3], "remora_ib.tmp", "w");
+  if (file == NULL) {
+    perror("Cannot open run-local collector state");
+    return EXIT_FAILURE;
+  }
   fprintf(file, "%.6f ", time_new);
 
   for (int i = 0; i < 4; i++) {

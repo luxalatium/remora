@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
   bool is_tmp_file_exists = false;
 
   FILE *file = NULL;
-  file = fopen("/dev/shm/remora_opa.tmp","r");
+  file = remora_open_state(argv[3], "remora_opa.tmp", "r");
 
   if (file != NULL)  {
 
@@ -194,7 +194,11 @@ int main(int argc, char *argv[])
 
   // Update tmp file
 
-  file = fopen("/dev/shm/remora_opa.tmp","w");
+  file = remora_open_state(argv[3], "remora_opa.tmp", "w");
+  if (file == NULL) {
+    perror("Cannot open run-local collector state");
+    return EXIT_FAILURE;
+  }
   fprintf(file, "%.6f ", time_new);
 
   for (int i = 0; i < 4; i++) {
