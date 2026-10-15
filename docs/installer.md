@@ -41,6 +41,21 @@ Commands must succeed in order;
 `configure` with BLOCKED features exits 2, and build refuses a blocked plan.
 There is no automatic fallback to the legacy installer.
 
+Configure, build and install print important progress immediately to stdout,
+including module checks/results, dependency configure/make steps, artifact
+verification, destination copying and installation publication. Lines use the
+`[configure]`, `[build]` or `[install]` prefix and include log/receipt paths.
+Failed commands and interrupted operations report progress without claiming
+completion; diagnostic errors also remain on stderr. Full command stdout/stderr
+stay in the recorded log files. The `show` command retains its plan-only output.
+
+Installer Bash source uses four-space indentation, separate lines for statements
+and expanded functions, conditionals, loops and case arms. Quoted probe source,
+JSON expressions and heredocs remain data; formatting must not change them.
+Development formatting uses `shfmt -ln bash -i 4 -ci -sr` on `install.sh`,
+`installer/cli.sh` and `installer/common.sh`; shfmt is not an installer runtime
+dependency.
+
 ## Toolchain configuration
 
 `--cc`, `--cxx`, `--fc`, `--mpicc`, `--mpicxx`, `--mpifc`, `--nvcc`,

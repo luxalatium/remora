@@ -65,6 +65,10 @@ if "-DFAIL_NVML" in args and any("nvml.c" in a for a in args):
     print("nvml.h missing", file=sys.stderr); sys.exit(1)
 if pathlib.Path.cwd().name == "build" and (pathlib.Path(__file__).parent / "fail-build").exists():
     print("injected compile failure", file=sys.stderr); sys.exit(9)
+if pathlib.Path.cwd().name == "build" and (pathlib.Path(__file__).parent / "slow-build").exists():
+    import time
+    (pathlib.Path(__file__).parent / "build-started").write_text("started")
+    time.sleep(10)
 out = pathlib.Path(args[args.index("-o") + 1])
 header = bytearray(32); header[:4] = b"\x7fELF"; header[5] = 1
 # Synthetic ELF header only; never execute these files.
@@ -136,6 +140,8 @@ exec /bin/mv "$@"
         result = subprocess.run(["/bin/bash", str(self.source / "install.sh"), *args],
                                 cwd=self.root, env=env, capture_output=True, text=True)
         self.last_output = result.stdout + result.stderr
+        self.last_stdout = result.stdout
+        self.last_stderr = result.stderr
         if result.returncode not in (0,2,130): print(self.last_output)
         return result.returncode
 
@@ -162,6 +168,87 @@ exec /bin/mv "$@"
         self.assertTrue((self.prefix / "bin/binary_data_collectors/data_collect_memory").is_file())
         self.assertFalse((self.prefix / "bin/binary_data_collectors/data_collect_gpu").exists())
         self.assertEqual(json.loads((self.prefix / "build-manifest.json").read_text())["build"]["runtime_qualification"], "NOT_RUN")
+
+    def assert_progress_order(self, phase, messages):
+        position = 0
+        for message in messages:
+            marker = f"[{phase}] {message}"
+            index = self.last_stdout.find(marker, position)
+            self.assertGreaterEqual(index, 0, self.last_stdout)
+            position = index + len(marker)
+
+    def test_progress_on_stdout_for_all_installation_phases(self):
+        self.assertEqual(self.config(), 0)
+        self.assert_progress_order("configure", [
+            "Starting configuration", "Checking platform and base scripts",
+            "Checking module: memory", "Module memory: READY",
+            "Recording source, dependency and environment checksums",
+            "Configuration result: READY",
+        ])
+        self.assertEqual(self.last_stderr, "")
+        plan = str(self.build / "plan.json")
+        self.assertEqual(self.invoke(["build", "--plan", plan]), 0)
+        self.assert_progress_order("build", [
+            "Starting build; verifying plan", "Preparing staged scripts",
+            "Building module: memory", "Module memory: BUILT",
+            "Verifying expected artifacts", "Build complete; receipt:",
+        ])
+        self.assertEqual(self.last_stderr, "")
+        self.assertEqual(self.invoke(["install", "--plan", plan]), 0)
+        self.assert_progress_order("install", [
+            "Starting installation; verifying plan", "Verifying staged artifacts",
+            "Copying installation", "Verifying destination copy checksums",
+            "Publishing installation", "Installation complete; receipt:",
+        ])
+        self.assertEqual(self.last_stderr, "")
+        self.assertEqual(self.invoke(["show", "--plan", plan]), 0)
+        self.assertNotIn("[show]", self.last_stdout)
+        for log in (self.build / "checks/logs").glob("*.stdout"):
+            self.assertNotIn("[configure]", log.read_text())
+
+    def test_failure_progress_does_not_claim_success(self):
+        self.assertEqual(self.config(), 0)
+        (self.tools / "fail-build").touch()
+        self.assertEqual(self.invoke(["build", "--plan", str(self.build / "plan.json")]), 2)
+        self.assert_progress_order("build", [
+            "Building module: memory", "Command collector-memory failed (exit 9)",
+            "FAILED:",
+        ])
+        self.assertNotIn("[build] Build complete", self.last_stdout)
+        self.assertNotIn("[build] Module memory: BUILT", self.last_stdout)
+        self.assertIn("ERROR:", self.last_stderr)
+        self.assertIn("injected compile failure", (self.build / "build/logs/collector-memory.stderr").read_text())
+
+    def test_progress_arrives_before_long_command_finishes(self):
+        import queue
+        import threading
+
+        self.assertEqual(self.config(), 0)
+        (self.tools / "slow-build").touch()
+        proc = subprocess.Popen(
+            ["/bin/bash", str(self.source / "install.sh"), "build", "--plan", str(self.build / "plan.json")],
+            cwd=self.root, env=self.env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        )
+        lines = queue.Queue()
+        reader = threading.Thread(target=lambda: [lines.put(line) for line in proc.stdout], daemon=True)
+        reader.start()
+        try:
+            deadline = time.monotonic() + 8
+            output = ""
+            while "[build] Building module: memory" not in output:
+                output += lines.get(timeout=max(0.01, deadline - time.monotonic()))
+            while not (self.tools / "build-started").exists() and time.monotonic() < deadline:
+                time.sleep(0.02)
+            self.assertTrue((self.tools / "build-started").exists())
+            self.assertIsNone(proc.poll(), output)
+        finally:
+            if proc.poll() is None:
+                proc.terminate()
+            proc.wait(timeout=8)
+            reader.join(timeout=2)
+            proc.stdout.close()
+            proc.stderr.close()
+        self.assertEqual(proc.returncode, 130)
 
     def test_gpu_auto_skips_missing_header(self):
         self.assertEqual(self.config({"gpu": "auto"}, ["--cppflags=-DFAIL_NVML"]), 0)
