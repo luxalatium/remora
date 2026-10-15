@@ -118,7 +118,7 @@ check_status() {
 }
 
 module_check() {
-    local name=$1 kind=$2 stage="$WORK/$1-stage" dep status value description bash_path entry path
+    local name=$1 kind=$2 stage="$WORK/$1-stage" dep status entry
     platform_check || return 1
     while IFS= read -r dep; do
         status=$(jq -r --arg k "$dep" '.[$k].status // "NOT_RUN"' "$MODULES")
@@ -144,27 +144,9 @@ module_check() {
             return 1
         }
     fi
-    if [[ $kind == mpip ]]; then
-        need mpicc || return 1
-        run "$WORK" "$WORK/logs" mpi-description 60 "$(tool_path mpicc)" -v || return 1
-        description=$(jq -r '.mpicc|.version+" "+(.backend//"")' "$TOOLS")
-        description+=$(cat "$WORK/logs/mpi-description.stdout" "$WORK/logs/mpi-description.stderr")
-        if ! printf '%s' "$description" | grep -Eiq 'intel(\(r\))? mpi|mvapich'; then
-            error 'legacy statistics backend supports Intel MPI/MVAPICH2 only'
-            return 1
-        fi
-        need mpifc && need mpip_python || return 1
-        value=$(jq -r '.mpip_python.version' "$TOOLS")
-        [[ $value == *'Python 2.'* ]] || {
-            error 'bundled mpiP 3.4.1 requires Python 2'
-            return 1
-        }
-        compile_probe mpi-c "$(tool_path mpicc)" "$MPI_C" .c cflags || return 1
-        compile_probe mpi-fortran "$(tool_path mpifc)" "$MPI_F" .f fflags || return 1
-    fi
     case $kind in
-        sysstat | mpip)
-            need make && dependency_build "$name" "$stage" || return 1
+        third_party)
+            need make && third_party_build "$name" "$stage" || return 1
             ;;
         collector | nvml)
             if [[ $kind == nvml ]]; then
@@ -192,7 +174,7 @@ configure() {
     [[ -n $BUILD_DIR ]] || fatal '--build-dir is required'
     BUILD_DIR=$(absolute "$BUILD_DIR") || fatal 'invalid build path'
     [[ ! -e $BUILD_DIR && ! -L $BUILD_DIR ]] || fatal 'build directory must be new; use a separate directory for reconfigure'
-    for path in src docs extra installer runtime; do
+    for path in src docs extra installer runtime build_support third_party_packages; do
         [[ $BUILD_DIR != "$ROOT/$path" && $BUILD_DIR != "$ROOT/$path/"* ]] || fatal 'build directory cannot be inside source/dependency directories'
     done
     mkdir -p -- "$BUILD_DIR" && chmod 700 "$BUILD_DIR" || fatal 'cannot create build directory'
@@ -204,7 +186,8 @@ configure() {
     FAILURES="$WORK/tool-failures.json"
     CHECKS="$WORK/checks.json"
     MODULES="$WORK/modules.json"
-    for path in "$TOOLS" "$FAILURES" "$CHECKS" "$MODULES"; do
+    THIRD_PARTY_RESULTS="$WORK/third_party_packages.json"
+    for path in "$TOOLS" "$FAILURES" "$CHECKS" "$MODULES" "$THIRD_PARTY_RESULTS"; do
         printf '{}\n' > "$path"
     done
     jq -n --slurpfile registry "$REGISTRY" \
@@ -378,9 +361,9 @@ configure() {
     jq -n --arg root "$ROOT" --arg build "$BUILD_DIR" --arg system "$SYSTEM" --arg machine "$MACHINE" --arg status "$status" \
         --slurpfile config "$CONFIG" --slurpfile tools "$TOOLS" --slurpfile checks "$CHECKS" --slurpfile modules "$MODULES" \
         --slurpfile source "$WORK/source.json" --slurpfile external "$WORK/external.json" --slurpfile environment "$WORK/environment.json" \
-        --slurpfile selected "$WORK/selected.json" --slurpfile expected "$WORK/expected.json" \
+        --slurpfile selected "$WORK/selected.json" --slurpfile expected "$WORK/expected.json" --slurpfile third_party "$THIRD_PARTY_RESULTS" \
         '{schema:"remora-build-plan/v2",seal_algorithm:"jq-cS-utf8/v1",source:$root,source_files:$source[0],build_dir:$build,config:$config[0],tools:$tools[0],
-        checks:$checks[0],modules:$modules[0],external_dependencies:$external[0],environment:$environment[0],platform:{system:$system,machine:$machine},
+        checks:$checks[0],modules:$modules[0],third_party_packages:$third_party[0],external_dependencies:$external[0],environment:$environment[0],platform:{system:$system,machine:$machine},
         selected:$selected[0],expected_artifacts:$expected[0],status:$status,runtime_qualification:"NOT_RUN"}' > "$BUILD_DIR/plan.json" || fatal 'cannot save plan'
     PLAN="$BUILD_DIR/plan.json"
     value=$(json_hash "$PLAN" 'del(.plan_sha256)') || fatal 'cannot hash plan'
@@ -447,6 +430,8 @@ build_plan() {
     PHASE=build
     [[ ! -e $WORK && ! -L $WORK ]] || fatal 'build already attempted; configure a new build directory'
     mkdir -- "$WORK" || fatal 'cannot create build directory'
+    THIRD_PARTY_RESULTS="$WORK/third_party_packages.json"
+    printf '{}\n' > "$THIRD_PARTY_RESULTS" || fatal 'cannot initialize dependency receipts'
     stage="$WORK/stage"
     mkdir -- "$stage" || fatal 'cannot create stage'
     RESULT_FILE="$WORK/result.json"
@@ -474,8 +459,8 @@ build_plan() {
         kind=$(jq -r --arg k "$name" '.modules[$k].kind' "$REGISTRY")
         LAST_ERROR=''
         case $kind in
-            sysstat | mpip)
-                dependency_build "$name" "$stage" || fatal "${LAST_ERROR:-dependency build failed}"
+            third_party)
+                third_party_build "$name" "$stage" || fatal "${LAST_ERROR:-dependency build failed}"
                 ;;
             collector | nvml)
                 collector "$name" "$stage" || fatal "${LAST_ERROR:-collector build failed}"
@@ -491,6 +476,7 @@ build_plan() {
     inspect_stage "$stage" build || fatal "${LAST_ERROR:-artifact inspection failed}"
     artifact_manifest "$stage" "$WORK/artifacts.json" || fatal 'artifact manifest failed'
     json_update "$RESULT_FILE" --slurpfile artifacts "$WORK/artifacts.json" '.status="BUILT" | .artifacts=$artifacts[0] | .runtime_qualification="NOT_RUN"' || fatal 'cannot save build receipt'
+    json_update "$RESULT_FILE" --slurpfile third_party "$THIRD_PARTY_RESULTS" '.third_party_packages=$third_party[0]' || fatal 'cannot save dependency receipts'
     jq -n --slurpfile plan "$PLAN" --slurpfile build "$RESULT_FILE" '{plan:$plan[0],build:$build[0]}' > "$stage/build-manifest.json" || fatal 'cannot save installed provenance'
     progress "Build complete; receipt: $RESULT_FILE; logs: $WORK/logs"
     printf '%s\n' 'BUILT; runtime NOT_RUN. Review logs, then run install with the same plan.'

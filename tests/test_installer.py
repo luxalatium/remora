@@ -39,6 +39,8 @@ class InstallerTests(unittest.TestCase):
             shutil.copy2(SOURCE / name, self.source / name)
         shutil.copytree(SOURCE / "installer", self.source / "installer")
         shutil.copytree(SOURCE / "runtime", self.source / "runtime")
+        shutil.copytree(SOURCE / "build_support", self.source / "build_support")
+        shutil.copytree(SOURCE / "third_party_packages", self.source / "third_party_packages")
         shutil.copytree(SOURCE / "src", self.source / "src")
         (self.source / "docs").mkdir()
         for name in ("modules_help", "modules_whatis", "remora_user_guide.pdf"):
@@ -111,7 +113,7 @@ if "shared" in args: pathlib.Path("libmpiP.so").write_bytes(header)
 import subprocess,sys
 args=sys.argv[1:]
 while args and args[0].startswith("--"): args.pop(0)
-limit=float(args.pop(0)); proc=subprocess.Popen(args)
+limit=float(args.pop(0)); proc=subprocess.Popen(args,close_fds=False)
 try: sys.exit(proc.wait(timeout=limit))
 except subprocess.TimeoutExpired:
     proc.terminate()
@@ -426,9 +428,9 @@ exec /bin/mv "$@"
     def test_dependency_configure_failure_is_not_masked(self):
         self.dependency_fixture("mpstat", configure_exit=6)
         self.assertEqual(self.config({"mpstat": "on"}), 2)
-        log = self.build / "checks/logs/mpstat-configure.json"
+        log = self.build / "checks/third_party_packages/mpstat/logs/mpstat-configure.json"
         self.assertEqual(json.loads(log.read_text())["exit_code"], 6)
-        self.assertFalse((self.build / "checks/logs/mpstat-make.json").exists())
+        self.assertFalse((self.build / "checks/third_party_packages/mpstat/logs/mpstat-make.json").exists())
 
     def test_mpip_configure_static_shared_build_and_install(self):
         self.dependency_fixture("mpip")

@@ -187,3 +187,20 @@ Run `python3 -B -m unittest discover -s tests -p 'test_*.py'`. Installer tests
 use synthetic toolchains/dependency fixtures and failure injection; they do not
 establish native sysstat/mpiP/NVML compilation, HPC node-class compatibility,
 monitor correctness, overhead or full wrapper lifecycle qualification.
+
+## Third-party packages
+
+mpstat and mpiP use a separate Bash installer in `third_party_packages/`. Only
+enabled dependency modules invoke it. The main configure/build/install CLI and
+config format remain unchanged; required/auto/off decisions stay in REMORA.
+Dependency source/build/logs/results now live in
+`BUILD_DIR/checks/third_party_packages/NAME/` and
+`BUILD_DIR/build/third_party_packages/NAME/`; outer invocation logs remain under
+`checks/logs/` and `build/logs/`. Detailed progress is forwarded to stdout.
+
+The child tests actual compiler flags and records accepted/rejected defaults.
+Upstream make receives explicit effective flags, preventing sysstat from adding
+unsupported `-pipe` again. User flags are never silently discarded. Configure
+receipts are sealed in the plan; build checks the same archive/tool/flag identity
+before upstream make. This source layout change requires fresh configuration.
+See [boundary and standalone usage](third-party-installer.md).

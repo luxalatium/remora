@@ -37,3 +37,9 @@ artifact tampering, interruption, timeout, archive traversal and installation
 without overwriting an existing prefix. Python is the development test harness,
 not an installer runtime dependency. These tests never run linked probe or
 collector binaries and are not native dependency or HPC qualification.
+
+`test_third_party.py` checks the standalone dependency boundary, selective
+invocation, compiler-default rejection/ignored warnings versus required user
+flags, upstream make overrides, capability drift, recipe sealing, required PIC,
+optional failure receipts and interruption. Tests use synthetic compiler/artifact
+fixtures and do not establish NVHPC, native dependency or HPC qualification.

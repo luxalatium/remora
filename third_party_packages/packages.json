@@ -1,0 +1,7 @@
+{
+  "schema": "remora-third-party-packages/v1",
+  "packages": {
+    "mpstat": {"version":"11.5.3","archive":"extra/sysstat-11.5.3.tar.gz","recipe":"mpstat.sh","tools":["cc","make","bash","readelf"],"artifacts":["bin/mpstat"]},
+    "mpip": {"version":"3.4.1","archive":"extra/mpiP-3.4.1.tar.gz","recipe":"mpip.sh","tools":["mpicc","mpifc","mpip_python","make","bash","readelf"],"artifacts":["lib/libmpiP.a","lib/libmpiP.so"]}
+  }
+}

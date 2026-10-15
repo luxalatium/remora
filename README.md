@@ -21,6 +21,9 @@ The Bash installer supports explicit compiler/MPI/CUDA/NVML
 configuration, per-module `on/auto/off` selection, compile/link sanity checks,
 and separate `configure`, `show`, `build`, `install` commands. See the
 [installer guide](docs/installer.md) for examples and compatibility changes.
+Third-party builds (mpstat/mpiP) are delegated to their own Bash installer under
+[`third_party_packages/`](docs/third-party-installer.md), including compiler-option
+capability checks. REMORA retains module selection and final deployment.
 Installation readiness is separate from runtime qualification. On HPC, run
 compilation checks and builds in an allocated compute session.
 The installer requires Bash, jq and standard Linux utilities; Python is used
