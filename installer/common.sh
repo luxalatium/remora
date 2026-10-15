@@ -66,6 +66,8 @@ external_manifest() {
         hash=$(hash_file "$path") || return 1
         printf '%s\0%s\0' "$path" "$hash" >> "$records"
     done < "$listing"
+    # Keep empty values and the last pair intact with jq 1.5 as well as 1.6+.
+    printf '\001' >> "$records" || return 1
     jq -Rs 'split("\u0000") | .[0:-1] as $a | reduce range(0; $a|length; 2) as $i ({}; .[$a[$i]]=$a[$i+1])' "$records" > "$output" || return 1
     rm -f -- "$records" "$listing"
 }
@@ -81,6 +83,8 @@ environment_manifest() {
             printf '\001\0' >> "$records"
         fi
     done
+    # Keep empty values and the last pair intact with jq 1.5 as well as 1.6+.
+    printf '\001' >> "$records" || return 1
     jq -Rs 'split("\u0000") | .[0:-1] as $a | reduce range(0; $a|length; 2) as $i ({}; .[$a[$i]]= (if $a[$i+1]=="\u0001" then null else $a[$i+1] end))' "$records" > "$output" || return 1
     rm -f -- "$records"
 }

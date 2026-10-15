@@ -289,6 +289,9 @@ record_files() {
         fi
         printf '%s\0%s\0' "$relative" "$hash" >> "$records" || return 1
     done
+    # jq 1.5 drops the trailing empty split field. A nonempty sentinel makes
+    # removing the final field deterministic across supported jq versions.
+    printf '\001' >> "$records" || return 1
     jq -Rs 'split("\u0000") | .[0:-1] as $a | reduce range(0; $a|length; 2) as $i ({}; .[$a[$i]]=$a[$i+1])' \
         "$records" > "$output" || return 1
     rm -f -- "$records"

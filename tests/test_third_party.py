@@ -45,6 +45,32 @@ if "-pipe" in args:
             env=self.f.env, cwd=self.f.root, capture_output=True, text=True,
         )
 
+    def test_old_jq_split_keeps_last_checksum_and_environment_value(self):
+        # Emulate jq 1.5 omitting the final empty split field, using the host jq.
+        actual_jq = shutil.which("jq")
+        wrapper = self.f.tools / "jq"
+        expression = r'split("\u0000")'
+        compatibility = r'(split("\u0000") | if .[-1]=="" then .[0:-1] else . end)'
+        wrapper.write_text("#!" + sys.executable + "\n" +
+            "import os,sys\nargs=sys.argv[1:]\n" +
+            "args=[arg.replace(" + repr(expression) + ", " + repr(compatibility) + ") for arg in args]\n" +
+            "os.execv(" + repr(actual_jq) + ", [" + repr(actual_jq) + "] + args)\n")
+        wrapper.chmod(0o755)
+        self.f.env["TACC_CUDA_LIB"] = ""  # Empty final value must remain empty, not null.
+        include = self.f.root / "external include"
+        include.mkdir()
+        header = include / "nvml.h"
+        header.write_text("external manifest fixture")
+        self.f.dependency_fixture("mpstat")
+        self.assertEqual(self.f.config({"mpstat": "on", "cpu": "on"}, ["--nvml-include", str(include)]), 0, self.f.last_output)
+        receipt = self.child_result()
+        self.assertRegex(receipt["artifacts"]["bin/mpstat"], r"^[0-9a-f]{64}$")
+        plan = self.f.plan()
+        self.assertEqual(plan["environment"]["TACC_CUDA_LIB"], "")
+        self.assertRegex(plan["external_dependencies"][str(header)], r"^[0-9a-f]{64}$")
+        self.assertTrue(all(isinstance(value, str) and len(value) == 64 for value in plan["source_files"].values()))
+        self.f.build_install()
+
     def test_standalone_does_not_load_remora_cli(self):
         self.f.dependency_fixture("mpstat")
         (self.f.source / "installer/cli.sh").rename(self.f.source / "installer/unused-cli.sh")
