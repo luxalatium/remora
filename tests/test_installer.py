@@ -415,7 +415,8 @@ exec /bin/mv "$@"
     def dependency_fixture(self, name, configure_exit=0):
         directory = self.root / (name + "-fixture")
         directory.mkdir()
-        (directory / "configure").write_text("#!/bin/sh\nexit " + str(configure_exit) + "\n")
+        probe = 'echo "main(){ FF(); return 0; }" > flink.c\n' if name == "mpip" else ""
+        (directory / "configure").write_text("#!/bin/sh\n" + probe + "exit " + str(configure_exit) + "\n")
         (directory / "Defs.mak.in").write_text("PYTHON  = python\n")
         with tarfile.open(self.source / installer.ARCHIVES[name], "w:gz") as tar:
             tar.add(directory, arcname=name + "-fixture")

@@ -84,3 +84,10 @@ mpiP builds to this same recipe. Its unique dependency work/receipts are retaine
 under TMPDIR (default /tmp); on HPC set TMPDIR to a task-owned scratch directory
 and include that directory in result backups. Logs and library destination paths
 are quoted, including paths with spaces. No historical archives are glob-selected.
+
+The recipe also repairs the release's Fortran-symbol C probe in its extracted
+configure script: it declares `extern void FF(void)` and uses `int main(void)`.
+The exact single expected upstream probe must be present; unexpected source
+layout fails closed. This avoids implicit-int/function-declaration errors in
+modern C compilers without weakening user compiler flags or disabling Fortran.
+The retained release archive, generated library API and receipt schema are unchanged.

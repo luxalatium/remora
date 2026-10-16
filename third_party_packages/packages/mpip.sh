@@ -8,6 +8,27 @@ mpi_debug_default() {
     tp_default_flag "$language" "$compiler" -g
 }
 
+# Upstream 3.5's symbol probe predates C99. Repair only the extracted copy;
+# do not relax compiler diagnostics for the entire dependency.
+mpi_fix_fortran_symbol_probe() {
+    local line count=0 old='main(){ FF(); return 0; }'
+    local replacement='extern void FF(void); int main(void){ FF(); return 0; }'
+    local temporary="$WORK/mpip-configure-compatible"
+    while IFS= read -r line || [[ -n $line ]]; do
+        [[ $line != *"$old"* ]] || count=$((count + 1))
+    done < "$SOURCE/configure"
+    [[ $count == 1 ]] || {
+        error 'unexpected mpiP 3.5 Fortran-symbol probe; refusing compatibility rewrite'
+        return 1
+    }
+    while IFS= read -r line || [[ -n $line ]]; do
+        line=${line/$old/$replacement}
+        printf '%s\n' "$line"
+    done < "$SOURCE/configure" > "$temporary" || return 1
+    mv -- "$temporary" "$SOURCE/configure" || return 1
+    printf '[third-party] Updated mpiP Fortran-symbol probe for modern C compilers\n'
+}
+
 recipe_prepare() {
     local value
     value=$(jq -r .mpip_python.version "$TOOLS")
@@ -38,6 +59,7 @@ recipe_prepare() {
 }
 recipe_build() {
     local python cflags fflags cppflags ldflags build_env=()
+    mpi_fix_fortran_symbol_probe || return 1
     python=$(tp_make_flags "$(shell_quote "$(tool_path mpip_python)")") || return 1
     cflags=$(jq -r .flags.cflags "$CONFIG")
     fflags=$(jq -r .flags.fflags "$CONFIG")

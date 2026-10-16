@@ -179,6 +179,28 @@ if "mpstat" in args:''')
         self.assertTrue((self.f.prefix / "lib/libmpiP.a").is_file())
         self.assertTrue((self.f.prefix / "lib/libmpiP.so").is_file())
 
+    def test_mpip_fortran_symbol_probe_has_explicit_c_declarations(self):
+        self.f.dependency_fixture("mpip")
+        self.assertEqual(self.f.config({"mpip": "on"}, self.mpip_options()), 0, self.f.last_output)
+        source = self.f.build / "checks/third_party_packages/mpip/source/mpip-fixture"
+        probe = (source / "flink.c").read_text()
+        self.assertEqual(probe.strip(), "extern void FF(void); int main(void){ FF(); return 0; }")
+        self.f.build_install()
+
+    def test_mpip_unknown_symbol_probe_fails_closed(self):
+        source = self.f.root / "unknown-mpip"
+        source.mkdir()
+        configure = source / "configure"
+        configure.write_text("#!/bin/sh\n# unexpected source revision\n")
+        before = configure.read_bytes()
+        recipe = self.f.source / "third_party_packages/packages/mpip.sh"
+        command = 'source "$1"; SOURCE=$2; WORK=$2; error(){ printf "%s\n" "$*" >&2; }; mpi_fix_fortran_symbol_probe'
+        result = subprocess.run(["/bin/bash", "-c", command, "test", str(recipe), str(source)],
+            capture_output=True, text=True, env=self.f.env)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unexpected mpiP", result.stderr)
+        self.assertEqual(configure.read_bytes(), before)
+
     def test_mpip_python2_is_rejected_before_upstream_configure(self):
         self.f.dependency_fixture("mpip")
         self.f.mpip_python.write_text("#!/bin/sh\necho 'Python 2.7 synthetic'\n")
