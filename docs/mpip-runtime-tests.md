@@ -50,7 +50,14 @@ cases: four ranks, one repetition per mode/language. mpi_f08: core, four ranks,
 one repetition per mode if it compiles. A missing binding is SKIP with a compiler
 receipt; missing profiler interception is a separate coverage FAIL, not zero.
 
-Each launch has a finite timeout and private output directory. Record exact worker
+Each launch has a finite timeout and private output directory. The Bash runner
+changes to that case directory and passes relative `-f profile` to mpiP. mpiP3.5
+formats report paths through a fixed 256-byte buffer; a long absolute directory
+can truncate the extension or report counter and prevent finalization. Preserve
+valid statistics from truncated report names, but fail report naming separately.
+Three-system same-node A/B evidence supports this relative-directory workaround.
+The abort fixture synchronizes ranks after printing worker identity, before rank0
+invokes MPI_Abort, so cleanup does not depend on a print-versus-abort race. Record exact worker
 PID/start identity before exec, then inspect only those identities after launch.
 A timeout, surviving owned worker, affinity failure or allocation failure stops
 that path. Two equivalent failures require diagnosis before more attempts. Abort

@@ -239,6 +239,8 @@ program mpi_comprehensive
       call ok(ierr)
     end do
   case('abort')
+    call MPI_Barrier(MPI_COMM_WORLD,ierr)
+    call ok(ierr)
     if (rank_id==0) then
       write(*,'(A)') 'ABORT_EXPECTED 17'
       flush(6)

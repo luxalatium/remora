@@ -168,6 +168,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(test, "errors")) error_case();
     else if (!strcmp(test, "pcontrol")) pcontrol_case();
     else if (!strcmp(test, "abort")) {
+        mpi_ok(MPI_Barrier(MPI_COMM_WORLD));
         if (rank_id == 0) { puts("ABORT_EXPECTED 17"); fflush(stdout); MPI_Abort(MPI_COMM_WORLD, 17); }
         MPI_Barrier(MPI_COMM_WORLD);
         return 92;
