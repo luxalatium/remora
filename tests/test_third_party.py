@@ -141,17 +141,82 @@ if "mpstat" in args:''')
         self.assertEqual(self.f.invoke(["build", "--plan", str(self.f.build / "plan.json")]), 2)
         self.assertIn("source changed", self.f.last_output)
 
+    def mpip_options(self, interpreter=True):
+        options = ["--mpicc", str(self.f.cc), "--mpicxx", str(self.f.cc), "--mpifc", str(self.f.cc)]
+        if interpreter:
+            options += ["--mpip-python", str(self.f.mpip_python)]
+        return options
+
+    def test_mpip_openmpi_python3_default_and_explicit_build_tools(self):
+        self.f.dependency_fixture("mpip")
+        self.f.cc.write_text(self.f.cc.read_text().replace("Intel(R) MPI Synthetic compiler 1.0", "Open MPI 5.0.5 synthetic"))
+        self.assertEqual(self.f.config({"mpip": "on"}, self.mpip_options(interpreter=False)), 0, self.f.last_output)
+        receipt = self.child_result("mpip")
+        self.assertEqual(receipt["version"], "3.5")
+        self.assertEqual(receipt["tools"]["mpip_python"]["path"], str(self.f.mpip_python))
+        directory = self.f.build / "checks/third_party_packages/mpip"
+        for label in ("mpip-make", "mpip-shared"):
+            command = json.loads((directory / "logs" / (label + ".json")).read_text())["command"]
+            self.assertTrue(any(arg.startswith("PYTHON=") and str(self.f.mpip_python) in arg for arg in command))
+            self.assertIn("CXX=" + str(self.f.cc), command)
+        self.f.build_install()
+
+    def test_legacy_mpi_branch_delegates_to_same_python3_recipe(self):
+        self.f.dependency_fixture("mpip")
+        # Retained historical archive must not cause wildcard ambiguity.
+        (self.f.source / "extra/mpiP-3.4.1.tar.gz").write_bytes(b"retained unused archive")
+        legacy = (self.f.source / "installer/legacy-install.sh").read_text()
+        start = legacy.rfind("\nif [[", 0, legacy.index("# Use the pinned mpiP recipe;")) + 1
+        branch = legacy[start:legacy.index('if [[ "$PHI_BUILD"', start)]
+        env = self.f.env.copy()
+        env.update(TMPDIR=str(self.f.root), REMORA_BUILD_DIR=str(self.f.source), REMORA_DIR=str(self.f.prefix),
+            CC=str(self.f.cc), F77=str(self.f.cc), MPICXX=str(self.f.cc), MPIP_PYTHON=str(self.f.mpip_python),
+            haveMPICC="1", haveMPIFC="1", haveMV2="1", IMPI_stats="", haveIMPI="0",
+            BUILD_LOG=str(self.f.root / "legacy-build.log"), INSTALL_LOG=str(self.f.root / "legacy-install.log"))
+        (self.f.prefix / "lib").mkdir(parents=True)
+        result = subprocess.run(["/bin/bash", "-c", branch], env=env, cwd=self.f.source, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue((self.f.prefix / "lib/libmpiP.a").is_file())
+        self.assertTrue((self.f.prefix / "lib/libmpiP.so").is_file())
+
+    def test_mpip_python2_is_rejected_before_upstream_configure(self):
+        self.f.dependency_fixture("mpip")
+        self.f.mpip_python.write_text("#!/bin/sh\necho 'Python 2.7 synthetic'\n")
+        self.assertEqual(self.f.config({"mpip": "on"}, self.mpip_options()), 2)
+        self.assertIn("requires Python 3", self.f.plan()["modules"]["mpip"]["reason"])
+        self.assertFalse((self.f.build / "checks/third_party_packages/mpip/logs/mpip-configure.json").exists())
+
+    def test_mpip_python3_version_claim_is_not_enough(self):
+        self.f.dependency_fixture("mpip")
+        self.f.mpip_python.write_text("#!/bin/sh\nif [ \"$1\" = --version ]; then echo 'Python 3.12 synthetic'; else exit 9; fi\n")
+        self.assertEqual(self.f.config({"mpip": "on"}, self.mpip_options()), 2)
+        self.assertIn("mpip-python3 failed", self.f.plan()["modules"]["mpip"]["reason"])
+
+    def test_mpip_cxx_link_failure_blocks_required_module(self):
+        self.f.dependency_fixture("mpip")
+        self.f.cc.write_text(self.f.cc.read_text().replace('args = sys.argv[1:]\n', 'args = sys.argv[1:]\nif "-DFAIL_CXX" in args: sys.exit(6)\n', 1))
+        self.assertEqual(self.f.config({"mpip": "on"}, self.mpip_options() + ["--cxxflags=-DFAIL_CXX"]), 2)
+        self.assertIn("mpi-cxx failed", self.f.plan()["modules"]["mpip"]["reason"])
+
+    def test_mpip_archive_hash_mismatch_blocks_extraction(self):
+        self.f.dependency_fixture("mpip")
+        archive = self.f.source / fixtures.installer.ARCHIVES["mpip"]
+        archive.write_bytes(archive.read_bytes() + b"tampered")
+        self.assertEqual(self.f.config({"mpip": "on"}, self.mpip_options()), 2)
+        self.assertIn("checksum differs", self.f.plan()["modules"]["mpip"]["reason"])
+        self.assertFalse((self.f.build / "checks/third_party_packages/mpip/source").exists())
+
     def test_required_pic_rejection_blocks_mpip(self):
         self.f.dependency_fixture("mpip")
         self.f.cc.write_text(self.f.cc.read_text().replace('args = sys.argv[1:]\n', 'args = sys.argv[1:]\nif "-fPIC" in args or "-fpic" in args: sys.exit(2)\n', 1))
-        extra = ["--mpicc", str(self.f.cc), "--mpifc", str(self.f.cc), "--mpip-python", str(self.f.python2)]
+        extra = ["--mpicc", str(self.f.cc), "--mpicxx", str(self.f.cc), "--mpifc", str(self.f.cc), "--mpip-python", str(self.f.mpip_python)]
         self.assertEqual(self.f.config({"mpip": "on"}, extra), 2)
         self.assertIn("required PIC", self.f.plan()["modules"]["mpip"]["reason"])
 
     def test_pic_alternative_is_selected(self):
         self.f.dependency_fixture("mpip")
         self.f.cc.write_text(self.f.cc.read_text().replace('args = sys.argv[1:]\n', 'args = sys.argv[1:]\nif "-fPIC" in args: sys.exit(2)\n', 1))
-        extra = ["--mpicc", str(self.f.cc), "--mpifc", str(self.f.cc), "--mpip-python", str(self.f.python2), "--cflags=-g0"]
+        extra = ["--mpicc", str(self.f.cc), "--mpicxx", str(self.f.cc), "--mpifc", str(self.f.cc), "--mpip-python", str(self.f.mpip_python), "--cflags=-g0"]
         self.assertEqual(self.f.config({"mpip": "on"}, extra), 0, self.f.last_output)
         receipt = self.child_result("mpip")
         self.assertEqual(receipt["required_capabilities"]["cflags"]["PIC"], "-fpic")
@@ -163,7 +228,9 @@ if "mpstat" in args:''')
     def test_standalone_interrupt_retains_failed_receipt(self):
         directory = self.f.root / "mpstat-fixture"
         directory.mkdir()
-        (directory / "configure").write_text("#!/bin/sh\nsleep 30\n")
+        marker = self.f.root / "configure-started"
+        self.f.env["REMORA_TEST_CONFIGURE_STARTED"] = str(marker)
+        (directory / "configure").write_text('#!/bin/sh\nprintf ready > "$REMORA_TEST_CONFIGURE_STARTED"\nsleep 30\n')
         import tarfile
         with tarfile.open(self.f.source / fixtures.installer.ARCHIVES["mpstat"], "w:gz") as tar:
             tar.add(directory, arcname="mpstat-fixture")
@@ -173,7 +240,8 @@ if "mpstat" in args:''')
         self.addCleanup(lambda: proc.kill() if proc.poll() is None else None)
         log = self.standalone / "logs/mpstat-configure.json"
         deadline = time.monotonic() + 12
-        while not log.exists() and proc.poll() is None and time.monotonic() < deadline: time.sleep(.02)
+        while not marker.exists() and proc.poll() is None and time.monotonic() < deadline: time.sleep(.02)
+        self.assertTrue(marker.exists(), "configure command did not start")
         self.assertTrue(log.exists())
         proc.terminate()
         self.assertEqual(proc.wait(timeout=10), 130)
@@ -183,7 +251,9 @@ if "mpstat" in args:''')
     def test_parent_interrupt_stops_dependency_and_preserves_both_logs(self):
         directory = self.f.root / "mpstat-fixture"
         directory.mkdir()
-        (directory / "configure").write_text("#!/bin/sh\nsleep 30\n")
+        marker = self.f.root / "configure-started"
+        self.f.env["REMORA_TEST_CONFIGURE_STARTED"] = str(marker)
+        (directory / "configure").write_text('#!/bin/sh\nprintf ready > "$REMORA_TEST_CONFIGURE_STARTED"\nsleep 30\n')
         import tarfile
         with tarfile.open(self.f.source / fixtures.installer.ARCHIVES["mpstat"], "w:gz") as tar:
             tar.add(directory, arcname="mpstat-fixture")
@@ -196,7 +266,8 @@ if "mpstat" in args:''')
         self.addCleanup(lambda: proc.kill() if proc.poll() is None else None)
         log = self.f.build / "checks/third_party_packages/mpstat/logs/mpstat-configure.json"
         deadline = time.monotonic() + 15
-        while not log.exists() and proc.poll() is None and time.monotonic() < deadline: time.sleep(.02)
+        while not marker.exists() and proc.poll() is None and time.monotonic() < deadline: time.sleep(.02)
+        self.assertTrue(marker.exists(), "configure command did not start")
         self.assertTrue(log.exists())
         proc.terminate()
         self.assertEqual(proc.wait(timeout=12), 130)

@@ -122,47 +122,43 @@ else
 fi
 
 
-if [[ "$haveMPICC" == "1" ]] && [[ "$haveMPIFC"  == "1" ]]; then
+if [[ "$haveMPICC" == "1" ]] && [[ "$haveMPIFC" == "1" ]]; then
 
-   if [[ "$haveMV2"    == "1" || "$IMPI_stats" == "impi_mpip" ]] ; then
+    if [[ "$haveMV2" == "1" || "$IMPI_stats" == "impi_mpip" ]]; then
 
-      [[ "$haveMV2"    == "1" ]]         && echo " REMORA built with mpiP statistics for Mvapich2"  | tee -a $BUILD_LOG
-      [[ "$IMPI_stats" == "impi_mpip" ]] && echo " REMORA built with mpiP statistics for IMPI 20$IMPI_year" | tee -a $BUILD_LOG
+        [[ "$haveMV2" == "1" ]] && echo " REMORA built with mpiP statistics for Mvapich2" | tee -a "$BUILD_LOG"
+        [[ "$IMPI_stats" == "impi_mpip" ]] && echo " REMORA built with mpiP statistics for IMPI 20$IMPI_year" | tee -a "$BUILD_LOG"
 
-      echo "Building mpiP ..." | tee -a $BUILD_LOG
-      cd $REMORA_BUILD_DIR/extra
-     #mpipfile=`ls -ld mpiP*.tar.gz | awk '{print $9}' | head -n 1`
-      mpipfile=`ls  mpiP*.tar.gz`
-      mpipdir=`echo  ${mpipfile%%.tar.gz}`
-      tar xzvf ${mpipfile}
-      [[ -f ./extra/mpiP-3.4.1/make-wrappers.py ]] && sed -i 's@#!/usr/local/bin/python@#!/usr/bin/python2@' ./extra/mpiP-3.4.1/make-wrappers.py
+        echo "Building mpiP ..." | tee -a "$BUILD_LOG"
+        # Use the pinned mpiP recipe; retained historical archives are not glob-selected.
+        MPIP_WORK=$(mktemp -d "${TMPDIR:-/tmp}/remora-mpiP.XXXXXX") || exit 2
+        jq -n --arg cc "$CC" --arg cxx "${MPICXX:-mpicxx}" --arg fc "$F77" \
+            --arg python "${MPIP_PYTHON:-python3}" \
+            '{tools:{mpicc:$cc,mpicxx:$cxx,mpifc:$fc,mpip_python:$python}}' \
+            > "$MPIP_WORK/config.json" || exit 2
+        (
+            set -o pipefail
+            bash "$REMORA_BUILD_DIR/third_party_packages/install.sh" build --package mpip \
+                --config "$MPIP_WORK/config.json" --build-dir "$MPIP_WORK/build" | tee -a "$BUILD_LOG"
+        ) || exit 2
+        echo "Installing mpiP ..." | tee -a "$INSTALL_LOG"
+        cp -p "$MPIP_WORK/build/stage/lib/libmpiP.a" "$MPIP_WORK/build/stage/lib/libmpiP.so" \
+            "$REMORA_DIR/lib/" || exit 2
 
-      [[ $(hostname -f) =~ ".ls6.tacc" ]] &&
-         sed -i 's/PYTHON  = python$/PYTHON  = python2/'         ./mpiP-3.4.1/Defs.mak.in &&
-         sed -i 's/PYTHON  = python$/PYTHON  = python2/'         ./mpiP-3.4.1/Defs.mak    &&    #preserved across install.sh executions
-         sed -i 's@#!/usr/local/bin/python@#!/usr/bin/python2@'  ./mpiP-3.4.1/make-wrappers.py
+    fi
 
-      cd ${mpipdir}
-      ./configure CFLAGS="-g" --enable-demangling --disable-bfd --disable-libunwind --prefix=${REMORA_DIR} | tee -a $BUILD_LOG
-      make        | tee -a $BUILD_LOG
-      make shared | tee -a $BUILD_LOG
-      echo "Installing mpiP ..." | tee -a $INSTALL_LOG
-      make install
+    if [[ "$IMPI_stats" == "impi" ]]; then
+        echo ""
+        echo " REMORA built with support for impi (ipm) statistics" | tee -a "$BUILD_LOG"
+        echo ""
+    fi
 
-   fi
-
-   if [[ "$IMPI_stats" == "impi" ]]; then
-      echo ""
-      echo " REMORA built with support for impi (ipm) statistics" | tee -a $BUILD_LOG
-      echo ""
-   fi
-
-   if [[ "$haveMV2" == "0" ]] && [[ "$haveIMPI" == "0" ]]; then
-      echo ""
-      echo " REMORA only supports statistics for IMPI and MVAPICH2"          | tee -a $BUILD_LOG
-      echo " WARNING : REMORA will be built with NO MPI statistics support " | tee -a $BUILD_LOG
-      echo ""
-   fi
+    if [[ "$haveMV2" == "0" ]] && [[ "$haveIMPI" == "0" ]]; then
+        echo ""
+        echo " REMORA only supports statistics for IMPI and MVAPICH2" | tee -a "$BUILD_LOG"
+        echo " WARNING : REMORA will be built with NO MPI statistics support " | tee -a "$BUILD_LOG"
+        echo ""
+    fi
 
 fi
 

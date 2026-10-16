@@ -1,0 +1,11 @@
+{
+  "package": "mpiP",
+  "version": "3.5",
+  "tag": "3.5",
+  "source_url": "https://github.com/llnl/mpiP/releases/download/3.5/mpip-3.5.tgz",
+  "upstream_release": "https://github.com/llnl/mpiP/releases/tag/3.5",
+  "archive": "extra/mpiP-3.5.tar.gz",
+  "sha256": "e366843d53fa016fb03903e51c8aac901aa5155edabe64698a8d6fa618a03bbd",
+  "modification": "None; original release asset bytes retained under the package naming convention",
+  "license": "BSD-style redistribution terms retained inside archive README.md and source files"
+}

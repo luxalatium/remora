@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 SOURCE = Path(__file__).resolve().parents[1]
 class InstallerData:
-    ARCHIVES = {"mpstat":"extra/sysstat-11.5.3.tar.gz", "mpip":"extra/mpiP-3.4.1.tar.gz"}
+    ARCHIVES = {"mpstat":"extra/sysstat-11.5.3.tar.gz", "mpip":"extra/mpiP-3.5.tar.gz"}
     @staticmethod
     def registry():
         return json.loads((SOURCE / "installer/modules.json").read_text())["modules"]
@@ -55,7 +55,7 @@ class InstallerTests(unittest.TestCase):
 import pathlib, sys
 args = sys.argv[1:]
 if args == ["--version"]:
-    print("Python 2.7 (synthetic)" if pathlib.Path(__file__).name == "python2" else "Intel(R) MPI Synthetic compiler 1.0"); sys.exit(0)
+    print("Intel(R) MPI Synthetic compiler 1.0"); sys.exit(0)
 if args == ["-dumpmachine"]:
     print("x86_64-linux-gnu"); sys.exit(0)
 if args in (["--showme"], ["-show"]):
@@ -95,8 +95,9 @@ if "libmpiP.a" in args: pathlib.Path("libmpiP.a").write_bytes(b"!<arch>\nfixture
 if "shared" in args: pathlib.Path("libmpiP.so").write_bytes(header)
 ''')
         self.make.chmod(0o755)
-        self.python2 = self.tools / "python2"
-        shutil.copy2(self.cc, self.python2)
+        self.mpip_python = self.tools / "python3"
+        self.mpip_python.write_text("#!" + sys.executable + "\nimport os,sys\nos.execv(" + repr(sys.executable) + ", [" + repr(sys.executable) + "] + sys.argv[1:])\n")
+        self.mpip_python.chmod(0o755)
         self.build = self.root / "build state"
         self.prefix = self.root / "installed version"
         self.env = os.environ.copy()
@@ -418,6 +419,12 @@ exec /bin/mv "$@"
         (directory / "Defs.mak.in").write_text("PYTHON  = python\n")
         with tarfile.open(self.source / installer.ARCHIVES[name], "w:gz") as tar:
             tar.add(directory, arcname=name + "-fixture")
+        registry = self.source / "third_party_packages/packages.json"
+        data = json.loads(registry.read_text())
+        if "sha256" in data["packages"][name]:
+            import hashlib
+            data["packages"][name]["sha256"] = hashlib.sha256((self.source / installer.ARCHIVES[name]).read_bytes()).hexdigest()
+            registry.write_text(json.dumps(data))
 
     def test_bundled_mpstat_probe_build_and_install(self):
         self.dependency_fixture("mpstat")
@@ -434,7 +441,7 @@ exec /bin/mv "$@"
 
     def test_mpip_configure_static_shared_build_and_install(self):
         self.dependency_fixture("mpip")
-        extra = ["--mpicc", str(self.cc), "--mpifc", str(self.cc), "--mpip-python", str(self.python2)]
+        extra = ["--mpicc", str(self.cc), "--mpicxx", str(self.cc), "--mpifc", str(self.cc), "--mpip-python", str(self.mpip_python)]
         self.assertEqual(self.config({"mpip": "on"}, extra), 0)
         self.build_install()
         self.assertTrue((self.prefix / "lib/libmpiP.a").exists())
@@ -444,7 +451,7 @@ exec /bin/mv "$@"
     def test_mpip_shared_failure_blocks_before_build(self):
         self.dependency_fixture("mpip")
         (self.tools / "fail-shared").touch()
-        extra = ["--mpicc", str(self.cc), "--mpifc", str(self.cc), "--mpip-python", str(self.python2)]
+        extra = ["--mpicc", str(self.cc), "--mpicxx", str(self.cc), "--mpifc", str(self.cc), "--mpip-python", str(self.mpip_python)]
         self.assertEqual(self.config({"mpip": "on"}, extra), 2)
         self.assertFalse(self.prefix.exists())
 

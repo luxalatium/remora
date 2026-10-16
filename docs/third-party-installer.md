@@ -57,3 +57,30 @@ final package prefix. The child may be used without loading REMORA's CLI.
 Package recipes and tool requirements are declared in `packages.json` and
 `packages/*.sh`; adding or upgrading a dependency does not add its flags or
 compatibility checks to REMORA's configuration orchestrator.
+
+## mpiP 3.5 / Python 3
+
+The active mpiP archive is the unmodified LLNL 3.5 release, pinned by SHA256
+in packages.json and described in third_party_packages/mpiP-source.json. The
+retained extra/mpiP-3.4.1.tar.gz is historical and is not selected by either
+installer. Existing plans must be reconfigured after this source change.
+
+The tool key mpip_python and --mpip-python option remain compatible; their
+default is now python3. The recipe requires a genuine Python 3 interpreter,
+MPI C/C++/Fortran wrappers and native compile/link/PIC capabilities. MPI vendor
+names do not replace these capability probes. Open MPI installation checks are
+allowed; this does not establish runtime/report-parser qualification.
+
+Upstream 3.5 still searches for a command named python. The recipe supplies its
+validated interpreter to that configure check and to both GNU make commands,
+so no system python alias or Python 2 installation is needed. Generic REMORA
+installation uses Bash; Python 3 is used only by the selected dependency's build.
+Output remains lib/libmpiP.a and lib/libmpiP.so with runtime NOT_RUN. Address
+translation/demangling/libunwind remain disabled in this initial recipe, as in
+the previous recipe; callsite/source fidelity needs separate runtime validation.
+
+Explicit legacy mode retains its historical MPI module selection but delegates
+mpiP builds to this same recipe. Its unique dependency work/receipts are retained
+under TMPDIR (default /tmp); on HPC set TMPDIR to a task-owned scratch directory
+and include that directory in result backups. Logs and library destination paths
+are quoted, including paths with spaces. No historical archives are glob-selected.

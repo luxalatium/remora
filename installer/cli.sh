@@ -11,7 +11,8 @@ REMORA installation-capability CLI (Bash; runtime qualification NOT_RUN)
 Options:
   --config FILE                       edit/reuse config in a NEW build directory
   --cc --cxx --fc --mpicc --mpicxx --mpifc --nvcc EXECUTABLE
-  --make --bash --readelf --mpip-python EXECUTABLE
+  --make --bash --readelf EXECUTABLE
+  --mpip-python EXECUTABLE            mpiP Python 3 interpreter (default python3)
   --cflags --cxxflags --fflags --cppflags --ldflags STRING
   --cuda PREFIX --nvml-include DIR --nvml-lib DIR
   --module NAME=on|auto|off             repeat per feature
@@ -191,7 +192,7 @@ configure() {
         printf '{}\n' > "$path"
     done
     jq -n --slurpfile registry "$REGISTRY" \
-        '{tools:{cc:"cc",cxx:"c++",fc:"gfortran",mpicc:"mpicc",mpicxx:"mpicxx",mpifc:"mpif77",nvcc:"nvcc",make:"make",bash:"bash",readelf:"readelf",mpip_python:"python2"},
+        '{tools:{cc:"cc",cxx:"c++",fc:"gfortran",mpicc:"mpicc",mpicxx:"mpicxx",mpifc:"mpif77",nvcc:"nvcc",make:"make",bash:"bash",readelf:"readelf",mpip_python:"python3"},
         flags:{cflags:"",cxxflags:"",fflags:"",cppflags:"",ldflags:""},
         modules:($registry[0].modules|map_values(.default)),prefix:"",nvml_include:"",nvml_lib:"",cuda:"",requested_tools:[]}' > "$CONFIG" || fatal 'cannot create configuration'
     if [[ -n $CONFIG_ARG ]]; then

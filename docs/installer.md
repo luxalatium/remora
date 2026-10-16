@@ -107,7 +107,7 @@ The declarative registry is `installer/modules.json`.
 | numa, eth, ib, power, temperature | auto | Each collector compile/link |
 | opa | off | C collector build |
 | gpu | auto | NVML header/link probe and GPU collector compile/link |
-| mpip | auto | Intel MPI/MVAPICH2 legacy backend, MPI C/Fortran compile-link, Python 2, mpiP 3.4.1 configure and static/shared build |
+| mpip | auto | MPI C/C++/Fortran compile-link, Python 3, pinned mpiP 3.5 configure and static/shared build |
 | network | auto | Shell module syntax |
 | lustre, lnet, dvs | off | Shell module syntax |
 
@@ -117,11 +117,12 @@ dependency explicitly off is not silently enabled; for example cpu=on with
 mpstat=off is BLOCKED. Explicit optional compiler selections also block if their
 checks fail, even if no enabled module consumes that compiler.
 
-The bundled mpiP version requires Fortran symbol configuration and a Python 2
-generator. This version does not pretend those requirements disappeared or
-claim Open MPI statistics support. Unsupported auto mpiP is clearly skipped;
-required mpiP blocks. Upgrading mpiP or adding an Open MPI backend is separate
-work. No Python installation or dependency download occurs automatically.
+The bundled mpiP 3.5 uses Python 3 for its wrapper generator and requires MPI
+C/C++/Fortran compile/link checks. Configure and make use the selected interpreter
+path; a command named python is not required. MPI wrappers, including Open MPI,
+are accepted based on capability checks. Runtime statistics/report compatibility
+requires independent qualification. Auto failures skip mpiP; required failures
+block installation. No Python installation or dependency download occurs automatically.
 
 Shell readiness and collector compile success do not establish runtime backend
 availability. In particular, Intel power/temperature collectors may compile on

@@ -77,7 +77,7 @@ if [[ -n $REQUEST ]]; then
     CONFIG_ARG="$BUILD_DIR/input-config.json"
 fi
 jq -n --slurpfile input "$CONFIG_ARG" '
-    {tools:{cc:"cc",cxx:"c++",fc:"gfortran",mpicc:"mpicc",mpicxx:"mpicxx",mpifc:"mpif77",nvcc:"nvcc",make:"make",bash:"bash",readelf:"readelf",mpip_python:"python2"},flags:{cflags:"",cxxflags:"",fflags:"",cppflags:"",ldflags:""}} * {tools:($input[0].tools//{}),flags:($input[0].flags//{})}' > "$CONFIG" || fatal 'invalid dependency configuration'
+    {tools:{cc:"cc",cxx:"c++",fc:"gfortran",mpicc:"mpicc",mpicxx:"mpicxx",mpifc:"mpif77",nvcc:"nvcc",make:"make",bash:"bash",readelf:"readelf",mpip_python:"python3"},flags:{cflags:"",cxxflags:"",fflags:"",cppflags:"",ldflags:""}} * {tools:($input[0].tools//{}),flags:($input[0].flags//{})}' > "$CONFIG" || fatal 'invalid dependency configuration'
 jq -e '(.tools|type)=="object" and ((.tools|keys)-["cc","cxx","fc","mpicc","mpicxx","mpifc","nvcc","make","bash","readelf","mpip_python"]|length)==0 and ((.flags|keys)-["cflags","cxxflags","fflags","cppflags","ldflags"]|length)==0 and (.tools|all(type=="string" and length>0 and (test("[\r\n]")|not))) and (.flags|type)=="object" and (.flags|all(type=="string" and (test("[\r\n]")|not)))' "$CONFIG" > /dev/null || fatal 'invalid tool or flag values'
 platform_check || fatal "$LAST_ERROR"
 for key in cflags fflags cppflags ldflags; do flags "$key" || fatal "$LAST_ERROR"; done
@@ -88,6 +88,10 @@ if [[ -n $REQUEST ]]; then
 fi
 archive=$(jq -r --arg k "$PACKAGE" '.packages[$k].archive' "$REGISTRY")
 [[ -f $ROOT/$archive && ! -L $ROOT/$archive ]] || fatal 'dependency archive missing or symlinked'
+expected_archive_hash=$(jq -r --arg k "$PACKAGE" '.packages[$k].sha256 // empty' "$REGISTRY")
+if [[ -n $expected_archive_hash && $(hash_file "$ROOT/$archive") != "$expected_archive_hash" ]]; then
+    fatal 'dependency archive checksum differs from pinned release'
+fi
 jq .flags "$CONFIG" > "$WORK/requested-flags.json" || fatal 'cannot record requested flags'
 json_update "$RESULT_FILE" --arg archive "$archive" --arg hash "$(hash_file "$ROOT/$archive")" \
     --arg version "$(jq -r --arg k "$PACKAGE" '.packages[$k].version' "$REGISTRY")" \
