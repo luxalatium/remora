@@ -23,7 +23,11 @@ Missing fixed allowlist fields are ABSENT/null; dynamic queue/priority patterns
 produce records only for actually returned canonical indices. The preserved full
 schema lets a reader distinguish missing patterns from zero. A readable zero PFC
 counter does not establish PFC enabled; a missing PFC counter does not establish
-PFC disabled. FEC bits, blocks and symbol errors are distinct units. No BER,
+PFC disabled. On IPoIB(type32), Ethernet pause/storm, priority discard and physical
+Ethernet discard/threshold interpretations are UNSUPPORTED with
+`availability_reason=not_applicable_to_ipoib_transport`; a returned numeric raw
+value is still preserved. FEC bits, PCS symbols and link-down events remain
+driver-native physical observations, without an enabled-feature claim. FEC bits, blocks and symbol errors are distinct units. No BER,
 per-job usage, rate, delta, cross-interface sum or hardware diagnosis is derived.
 `native_count` retains an unverified hardware/software quantum explicitly.
 

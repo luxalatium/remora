@@ -47,6 +47,10 @@ class NICNetwork(unittest.TestCase):
   self.put('eth0','other','rx_out_of_buffer 12\n');x=self.runmod(code=69);self.assertEqual(x['source_snapshots'][0]['values'],['12']);self.assertEqual(x['records'][0]['status'],'UNSUPPORTED')
  def test_mlx_ipoib_family(self):
   self.put('ib0','mlx5_core[ib_ipoib]','rx_out_of_buffer 99\n',type='32');x=self.runmod();self.assertEqual(self.field(x,'rx_out_of_buffer','ib0')['value'],'99')
+ def test_ipoib_pause_zero_is_inapplicable(self):
+  self.put('eth0','mlx5_core[ib_ipoib]','rx_global_pause 0\nrx_corrected_bits_phy 3\n',type='32');x=self.runmod('linkhealth');v=self.field(x,'rx_global_pause');self.assertEqual((v['status'],v['raw'],v['value']),('UNSUPPORTED','0',None));self.assertEqual(v['availability_reason'],'not_applicable_to_ipoib_transport');self.assertEqual(self.field(x,'rx_corrected_bits_phy')['value'],'3')
+ def test_ipoib_ethernet_priority_discard_not_interpreted(self):
+  self.put('eth0','mlx5_core[ib_ipoib]','rx_out_of_buffer 1\nrx_prio2_discards 0\n',type='32');x=self.runmod();self.assertEqual(self.field(x,'rx_prio2_discards')['status'],'UNSUPPORTED');self.assertEqual(self.field(x,'rx_out_of_buffer')['value'],'1')
  def test_plain_ipoib_unsupported_with_other_readable(self):
   self.put('ib0','ib_ipoib','rx_packets 99\n',type='32');x=self.runmod();self.assertEqual(self.field(x,'driver_allowlist','ib0')['status'],'UNSUPPORTED')
  def test_down_interfaces_included(self):

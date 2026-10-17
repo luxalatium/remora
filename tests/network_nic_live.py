@@ -88,6 +88,9 @@ def main():
       if v['kind']!='counter':skips[iface]=dict(reason='driver not allowlisted',driver=entities[iface]['driver']);continue
       name=v['metric']
       if v['status']!='OK':
+       if v.get('availability_reason')=='not_applicable_to_ipoib_transport':
+        assert entities[iface]['type']=='32' and name in parsed and v['raw']==str(parsed[name]) and v['value'] is None
+        skips[iface+'/'+name]=dict(reason=v['availability_reason'],raw=v['raw']);continue
        if name in parsed:failures.append(dict(error='present raw reported missing',rep=rep,record=v))
        continue
       if name not in parsed or v['raw']!=str(parsed[name]) or v['value']!=str(parsed[name]):failures.append(dict(error='raw index/name/value mapping',rep=rep,record=v));continue

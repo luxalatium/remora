@@ -31,7 +31,7 @@
 static FILE *pn_out;
 static unsigned pn_records,pn_readable;
 static int pn_bad,pn_first=1;
-static const char *pn_limit;
+static const char *pn_limit,*nc_reason;
 static void pn_quote_n(const char *s,size_t n) {
  if(!s) {fputs("null",pn_out);return;}
  fputc('"',pn_out);
@@ -80,7 +80,7 @@ static void pn_emit(const char *entity,const char *scope,const char *metric,cons
  fputs(",\"kind\":",pn_out);pn_quote(kind);fputs(",\"unit\":",pn_out);pn_quote(unit);
  fprintf(pn_out,",\"byte_scale\":0,\"status\":");pn_quote(pn_status(error));
  fprintf(pn_out,",\"errno\":%d,\"raw\":",error);pn_quote(raw);
- fputs(",\"value\":",pn_out);pn_quote(error?NULL:value);fputc('}',pn_out);
+ fputs(",\"value\":",pn_out);pn_quote(error?NULL:value);fputs(",\"availability_reason\":",pn_out);pn_quote(nc_reason);fputc('}',pn_out);
  if(!error && !strcmp(kind,"counter")) pn_readable++;
  if(error && !pn_optional(error)) pn_bad=1;
 }
@@ -166,7 +166,7 @@ static void nc_fetch(struct nc_device *d) {
 #elif defined(REMORA_NIC_TEST)
 /* Fixture backend is compiled only by tests, absent from installed collectors. */
 static void nc_fetch(struct nc_device *d) {
- char path[1024],line[2048];snprintf(path,sizeof path,"%s/class/net/%s/fixture",nc_sys,d->name);
+ char path[1024],line[2048];snprintf(path,sizeof path,"%.700s/class/net/%.15s/fixture",nc_sys,d->name);
  d->stage="fixture";FILE *in=fopen(path,"r");if(!in) {d->error=errno;return;}
  d->names=calloc(NC_STATS,NC_NAME);d->names_after=calloc(NC_STATS,NC_NAME);d->values=calloc(NC_STATS,sizeof *d->values);
  if(!d->names || !d->names_after || !d->values) {d->error=ENOMEM;fclose(in);return;}
@@ -242,7 +242,13 @@ static void nc_snapshot(struct nc_device *d) {
 static void nc_field_emit(struct nc_device *d,const char *name,const char *unit,const char *scope) {
  int error=d->error?d->error:ENOENT;char value[32];const char *raw=NULL;
  if(!d->error) for(unsigned i=0;i<d->count;i++) if(!strcmp((char*)d->names+i*NC_NAME,name)) {snprintf(value,sizeof value,"%" PRIu64,d->values[i]);raw=value;error=0;break;}
- pn_emit(d->name,scope,name,"SIOCETHTOOL/ETH_SS_STATS","counter",unit,raw,raw,error);
+ nc_reason=d->error?d->stage:error==ENOENT?"field_not_exposed_by_driver":NULL;
+ if(!error && !strcmp(d->type,"32") &&
+    (!strcmp(scope,"physical_port_priority") || strstr(name,"pause") ||
+     (!strcmp(scope,"physical_port") && strstr(name,"discard")) || !strcmp(name,"rx_buffer_passed_thres_phy"))) {
+  error=EOPNOTSUPP;nc_reason="not_applicable_to_ipoib_transport";
+ }
+ pn_emit(d->name,scope,name,"SIOCETHTOOL/ETH_SS_STATS","counter",unit,raw,raw,error);nc_reason=NULL;
 }
 static void nc_records(struct nc_device *d,const char *module) {
  const char *family=nc_family(d->driver);
