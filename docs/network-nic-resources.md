@@ -88,6 +88,12 @@ both existing implementations and JSONL. Preserve all source/oracle outputs,
 commands, statuses, binary/source hashes and repetitions. No formal overhead or
 legacy full-wrapper qualification is implied by these tests.
 
+For ixgbe packet-buffer PFC and read-only configuration acceptance, also run
+`bash tests/network_pfc_live.sh PREFIX NEW_OUTPUT_DIRECTORY` on allocated compute.
+See [PFC live acceptance](network-pfc-validation.md) for exact selectors, three
+repetitions per Bash/native path, uint64 brackets and separate enabled/mapping
+claims. Optional configuration-query failures retain explicit SKIP reasons.
+
 Field definitions follow. Definitions are capability candidates; availability
 must be established on the specific node/driver/kernel. Site observations belong
 in a separately versioned evidence catalog.
