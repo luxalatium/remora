@@ -12,9 +12,12 @@ including DOWN, excluding loopback. `REMORA_ETH_INTERFACES='eth0,ib0'` selects e
 names, sorted and checked for duplicates. Missing selected interfaces get ABSENT;
 unknown driver families get UNSUPPORTED with their raw GET observations retained.
 Support is per interface and field, not implied by discovery or another interface.
-The supported identities are `mlx5_core`, `mlx5_core[ib_ipoib]`, `ixgbe`, `igb`,
+Implemented allowlists recognize `mlx5_core`, `mlx5_core[ib_ipoib]`, `ixgbe`, `igb`,
 `tg3`, `bnxt_en`. Plain `ib_ipoib` counters remain the responsibility of existing
-network modules. The driver string and exact counter name must both match.
+network modules. The driver string and exact counter name must both match. Allowlist membership
+is not Linux hardware qualification; use a separately recorded per-node/kernel
+qualification catalog. Counter presence, enabled mode and traffic-driven behavior
+are separate claims.
 
 `nicstats` covers allocation/buffer pressure, queue stop/wake/drop and hardware
 or priority discards. `linkhealth` covers global pause, priority pause/PFC, and
