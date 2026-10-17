@@ -11,7 +11,7 @@
   "patches": [
     {
       "path": "third_party_packages/patches/mpiP-3.5-fortran-io.patch",
-      "sha256": "1a62f30bf6d30de27791f5e830294ff715913df9b0b170ba29952c68bca789bc",
+      "sha256": "4c97126f8b4ca509863fae338c88160fb0a5ad035da7c64f6d970da9e037b1ab",
       "purpose": "Translate Fortran choice-buffer sentinel addresses and account for blocking collective explicit-offset MPI-I/O bytes; original release archive unchanged."
     }
   ]

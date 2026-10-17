@@ -22,7 +22,17 @@
  
      if fdict[funct].rmaCountPname != "":
          olist.append( "\n"
-@@ -1445,6 +1449,9 @@
+@@ -1393,8 +1397,7 @@
+ 
+     for i in stringVarNames :
+         olist.append("  for(; " + i + "_len > 0; " + i + "_len--){\n")
+-        olist.append("    if( " + i + "[" + i + "_len] != ' '){\n")
+-        olist.append("      " + i +"_len++; // The length is last symbol index + 1\n")
++        olist.append("    if( " + i + "[" + i + "_len - 1] != ' '){\n")
+         olist.append("      break;\n")
+         olist.append("    }\n")
+         olist.append("  }\n");
+@@ -1445,6 +1448,9 @@
                  argname = "c_" + i;
              else:
                  argname = "&c_" + i;
@@ -32,7 +42,7 @@
          elif ( i in stringVarNames ) :
              argname = "c_" + i;
          else:
-@@ -1630,6 +1637,8 @@
+@@ -1630,6 +1636,8 @@
      symflist = copy.deepcopy(flist)
      symflist.append('mpipi_get_fortran_argc')
      symflist.append('mpipi_get_fortran_arg')

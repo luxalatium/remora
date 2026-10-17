@@ -27,3 +27,9 @@ architectures and multiple symbol spellings. Allocated Linux MPI controls must
 validate application data and independent byte expectations for each compiler,
 MPI, node class, and static/preload mode. Local generator checks alone do not
 establish runtime acceptance.
+
+Regression exposed an upstream Fortran CHARACTER conversion defect in MPI file
+paths: the generator read `buffer[length]` and sometimes copied an extra byte.
+The patch trims from `buffer[length - 1]` and copies exactly the resulting length.
+This prevents intermittent file-open errors from an unowned trailing byte.
+Original failures and the first sentinel/I/O patch revision remain in evidence.

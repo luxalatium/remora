@@ -43,6 +43,9 @@ class MpiPCompatibilityTests(unittest.TestCase):
                         start = wrappers.index('mpiPif_MPI_File_'+name+'(')
                         end = wrappers.index('extern void F77_MPI_FILE_'+name.upper()+'(', start)
                         self.assertIn('ioSize = (double)tsize * (double)*count;', wrappers[start:end])
+                    # Fortran CHARACTER lengths exclude the byte after the string.
+                    self.assertIn("filename[filename_len - 1] != ' '", wrappers)
+                    self.assertNotIn('filename_len++;', wrappers)
                     # C callers already use C sentinels; their arguments stay unchanged.
                     section = wrappers[wrappers.index('extern int MPI_Allreduce ('):]
                     section = section[:section.index('\n\nextern ') ]
