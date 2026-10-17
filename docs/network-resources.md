@@ -46,7 +46,11 @@ node/network namespace or driver RDMA port, never attributed to a process/user.
 Each record has entity/scope, metric/source, kind/unit/byte_scale, status/errno,
 **raw text** and a trimmed value. Numeric values are unsigned decimal **strings**
 so uint64 never passes through floating point. Raw trailing newlines are retained
-and JSON escaped. Reads are bounded, sequential and non-atomic.
+and JSON escaped. Non-ASCII bytes use byte-wise \u00XX escapes, preserving
+the original bytes without UTF-8 normalization. Reads are bounded, sequential
+and non-atomic. Metadata OK means the source was read: kernel/driver sentinel
+values such as NUMA/speed -1 retain their native unknown meaning. A port nominal
+rate, including on DOWN ports, is separate from measured traffic throughput.
 
 Counters are absolute native snapshots; this v1 emits no deltas, rates or sums.
 Resets/wrap/saturation remain visible in raw values. Consumers may difference
@@ -54,7 +58,9 @@ only known cumulative fields across matching identity/source/context and valid
 samples; never difference metadata or turn missing values into zero. Netdev
 aggregates overlap their error subcategories and stacked interfaces; ib and opa
 may overlap on hfi1. Do not add such values together. Endpoint/direction and
-hardware/driver semantics remain distinct.
+hardware/driver semantics remain distinct. The scope identifies the exposed
+sysfs object: driver software counters may be shared across ports or a device.
+Treat resets, wraps and saturated values as gaps when deriving differences.
 
 Netdev and IB errors use packets/events; mlx/hfi driver error semantics use
 `native_count` unless a packet/request meaning is established by the field.
