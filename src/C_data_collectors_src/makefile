@@ -64,6 +64,8 @@ data_collect_gpu: data_collect_gpu.o
 data_collect_gpu.o: data_collect_gpu.c
 	@$(CC) $(CCFLAGS) $(DEPFLAGS) -L/lib64 -I${TACC_CUDA_INC} -lnvidia-ml -c $<
 
+data_collect_eth.o data_collect_ib.o data_collect_opa.o: remora_network.h
+
 %.o: %.c
 	@$(CC) $(CCFLAGS) $(DEPFLAGS) -c $<
 

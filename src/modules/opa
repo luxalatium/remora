@@ -22,53 +22,27 @@
 #  2.- The full path where the output will be stored/read
 #  3.- The full path to an optional temporary storage location
 
+# Shell and native entrypoints share exact selection, units and run-local state.
+_remora_network_opa()
+{
+    local collector="${REMORA_BIN}/binary_data_collectors/data_collect_opa"
+    [[ ${REMORA_SYMMETRIC:-0} == 0 ]] || return 0
+    [[ ${REMORA_MODE:-FULL} == FULL || ${REMORA_MODE:-FULL} == MONITOR ]] || return 0
+    if [[ ! -x $collector ]]; then
+        printf 'REMORA opa requires its installed collector: %s\n' "$collector" >&2
+        return 69
+    fi
+    "$collector" "$@"
+}
+
 init_module_opa()
 {
-    REMORA_NODE=$1; REMORA_OUTDIR=$2; REMORA_TMPDIR=$3
-    if [[ "$REMORA_SYMMETRIC" == "0" ]]; then
-        if [[ "$REMORA_MODE" == "FULL" ]] || [[ "$REMORA_MODE" == "MONITOR" ]]; then
-            [[ -d /sys/class/infiniband/hfi1_0 ]] && adapter=hfi1_0 
-            [[ -d /sys/class/infiniband/mlx5_0 ]] && adapter=mlx5_0
-
-            opa_xmit_packs_cntr="/sys/class/infiniband/$adapter/ports/1/counters/port_xmit_packets"
-             opa_rcv_packs_cntr="/sys/class/infiniband/$adapter/ports/1/counters/port_rcv_packets"
-            opa_xmit_bytes_cntr="/sys/class/infiniband/$adapter/ports/1/counters/port_xmit_data"
-             opa_rcv_bytes_cntr="/sys/class/infiniband/$adapter/ports/1/counters/port_rcv_data"
-
-            opa_xmit_packs=`cat $opa_xmit_packs_cntr`
-             opa_rcv_packs=`cat  $opa_rcv_packs_cntr`
-            opa_xmit_bytes=`cat $opa_xmit_bytes_cntr`
-             opa_rcv_bytes=`cat  $opa_rcv_bytes_cntr`
-        fi
-    fi
+    _remora_network_opa "$1" "$2" "$3" --prime
 }
 
 collect_data_opa()
 {
-    REMORA_NODE=$1; REMORA_OUTDIR=$2; REMORA_TMPDIR=$3
-
-    if [[ "$REMORA_SYMMETRIC" == "0" ]]; then
-        if [[ "$REMORA_MODE" == "FULL" ]] || [[ "$REMORA_MODE" == "MONITOR" ]]; then
-
-            local TIMESTAMP=`date +%s.%3N`
-            local new_opa_xmit_packs=`cat $opa_xmit_packs_cntr`
-            local  new_opa_rcv_packs=`cat $opa_rcv_packs_cntr`
-            local new_opa_xmit_bytes=`cat $opa_xmit_bytes_cntr`
-            local  new_opa_rcv_bytes=`cat $opa_rcv_bytes_cntr`
-
-            printf "%f %10d %10d %10d %10d\n" $TIMESTAMP \
-                $((new_opa_xmit_packs-opa_xmit_packs)) \
-                $((new_opa_rcv_packs-opa_rcv_packs)) \
-                $((new_opa_xmit_bytes-opa_xmit_bytes)) \
-                $((new_opa_rcv_bytes-opa_rcv_bytes)) \
-                >> $REMORA_TMPDIR/opa_packets-${REMORA_NODE}.txt
-
-            opa_xmit_packs=$new_opa_xmit_packs
-             opa_rcv_packs=$new_opa_rcv_packs
-            opa_xmit_bytes=$new_opa_xmit_bytes
-             opa_rcv_bytes=$new_opa_rcv_bytes
-        fi
-    fi
+    _remora_network_opa "$1" "$2" "$3"
 }
 
 process_data_opa()

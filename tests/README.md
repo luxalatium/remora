@@ -43,3 +43,35 @@ invocation, compiler-default rejection/ignored warnings versus required user
 flags, upstream make overrides, capability drift, recipe sealing, required PIC,
 optional failure receipts and interruption. Tests use synthetic compiler/artifact
 fixtures and do not establish NVHPC, native dependency or HPC qualification.
+
+## Network module standard
+
+The versioned contract is [network-modules.md](../docs/network-modules.md).
+`test_network.py` compiles the real eth/ib/opa collectors and uses deterministic
+sysfs fixtures with independent expected integer results. A test-only wrapper
+injects EINVAL/EACCES or pauses a read for SIGTERM; production has no fault hooks.
+Set `REMORA_NETWORK_TEST_CC` to a compiler command when needed (separate from
+the installer's CC). Preserve compiler failures; missing compiler is not PASS.
+
+| Acceptance group | Required cases |
+| --- | --- |
+| Discovery | multiple Ethernet netdevs; no default loopback/IPoIB; all ACTIVE ports; mixed link layers; port 2; named subset; renamed hfi driver; OPA rejects mlx |
+| Backend and units | extended/classic/per-metric hw fallback; EINVAL; packet/event scale1, IB data4, hfi PMA data8, hfi DWORD4; no fallback masking malformed/denied reads |
+| Arithmetic | unsigned counters above 2^53/2^63; exact packet/byte deltas; sum/conversion overflow; reset/saturation; valid zero versus missing |
+| Continuity | first baseline; idempotent init; interface/HCA replacement; selection/source change; read failure and recovery; separate run directories |
+| Failure and cleanup | invalid selectors; truncated/corrupt state; legacy data preservation; output failure; pending transaction; nonblocking lock; symlink/FIFO; SIGTERM and owned-handle cleanup |
+| Compatibility | native/module exact fixture parity; old/new producer layout × old/new plot consumer; original raw checksums unchanged |
+| Linux hardware | clean isolated install; native GCC strict warnings; same fixture suite; three complete live intervals per default/explicit/module case; source-aware independent read brackets |
+| Traffic | three bounded 1MiB localhost TCP transfers for explicit lo with proc/net/dev as a separate kernel interface; record payload and raw before/after |
+
+`network_live.py --prefix PREFIX --output NEW_DIRECTORY --legacy-modules DIR`
+executes the last three groups on allocated Linux compute. DIR contains the
+three unchanged baseline module scripts for the compatibility cross-product.
+The runner never selects or submits an allocation, modifies sysfs or invokes
+MPI/UMAD. It preserves command status/stdout/stderr, inventory, per-call oracles,
+raw source/unit sidecars, legacy outputs and a machine-readable summary.
+PASS is scoped to package revision, compiler, system and observed node class.
+Unsupported modules are SKIP with observed exit69; denied/broken backends FAIL.
+A source-level unit mapping plus sysfs oracle is not an end-to-end fabric payload
+or overhead measurement. Multi-node payload and formal repeated overhead tests
+remain separate qualification levels, requiring their own allocation envelope.

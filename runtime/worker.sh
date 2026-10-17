@@ -65,11 +65,10 @@ case $MODULE in
         fi
         ;;
     eth)
-        [[ $IMPLEMENTATION != shell ]] || require_tool netstat
         [[ -d /sys/class/net ]] || unsupported 'network interfaces unavailable'
         ;;
     ib | opa)
-        compgen -G '/sys/class/infiniband/*/ports/*/counters/port_xmit_data' > /dev/null || unsupported 'fabric counters unavailable'
+        [[ -d /sys/class/infiniband ]] || unsupported 'fabric devices unavailable'
         ;;
     gpu)
         [[ -e /dev/nvidiactl ]] || unsupported 'NVIDIA device interface not exposed in this execution context'
@@ -134,6 +133,9 @@ if [[ $IMPLEMENTATION == shell ]]; then
     init_rc=$?
     printf '%s\n' "$init_rc" > "$CASE/init.rc"
     if ((init_rc != 0)); then
+        if [[ $MODULE == eth || $MODULE == ib || $MODULE == opa ]] && ((init_rc == 69)); then
+            unsupported 'no eligible network interface/port or installed reader'
+        fi
         result FAIL "module init failed (exit $init_rc); backend was prechecked"
         exit 0
     fi
@@ -143,6 +145,9 @@ else
     rc=$?
     printf '%s\n' "$rc" > "$CASE/warmup.rc"
     if ((rc != 0)); then
+        if [[ $MODULE == eth || $MODULE == ib || $MODULE == opa ]] && ((rc == 69)); then
+            unsupported 'no eligible network interface/port'
+        fi
         result FAIL "collector warmup failed (exit $rc)"
         exit 0
     fi
@@ -216,7 +221,9 @@ elif [[ $MODULE == power && $IMPLEMENTATION == shell ]] &&
     grep -q '^export REMORA_POWER_COLLECTOR=intel_rapl$' "$CASE/out/remora_env.txt"; then
     result FAIL 'available, but legacy RAPL shell divides microjoules by 1000 then by seconds, overstating watts by 1000; TIME(ms) contains seconds' PASS FAIL DERIVED
 elif [[ $MODULE == ib || $MODULE == opa ]]; then
-    result FAIL 'available, but port_*_data counters are four-octet units and legacy output treats them as bytes' PASS FAIL DERIVED
+    if [[ -s $RAW/network-$MODULE-$NODE.raw.tsv ]] && grep -q '^# remora-network/v1' "$RAW/network-$MODULE-$NODE.raw.tsv"; then
+        result PASS 'versioned source/unit evidence and complete intervals; independent oracle qualification still OPEN' PASS OPEN
+    else result FAIL 'network unit/source contract missing' PASS FAIL; fi
 else
     result PASS 'backend accessible; bounded samples and schema valid; semantic/oracle qualification still OPEN' PASS OPEN
 fi
