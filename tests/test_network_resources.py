@@ -1,5 +1,6 @@
 """Standard resource snapshots: real C, synthetic sysfs, no remote operations."""
 import fcntl
+import errno
 import json
 import os
 from pathlib import Path
@@ -143,7 +144,13 @@ class NetworkResources(unittest.TestCase):
     def test_output_symlink(self):
         target=self.base/'target';target.write_text('keep');(self.raw/'neterrors_n.jsonl').symlink_to(target);self.runmod(code=74);self.assertEqual(target.read_text(),'keep')
     def test_output_hardlink(self):
-        target=self.base/'target';target.write_text('keep\n');os.link(target,self.raw/'neterrors_n.jsonl');self.runmod(code=74);self.assertEqual(target.read_text(),'keep\n')
+        target=self.base/'target';target.write_text('keep\n')
+        try:os.link(target,self.raw/'neterrors_n.jsonl')
+        except OSError as e:
+            if e.errno in (errno.EPERM,errno.EOPNOTSUPP,errno.EXDEV,errno.ENOSYS):
+                self.skipTest('fixture filesystem disallows hard links: errno='+str(e.errno))
+            raise
+        self.runmod(code=74);self.assertEqual(target.read_text(),'keep\n')
     def test_output_fifo(self):os.mkfifo(self.raw/'neterrors_n.jsonl');self.runmod(code=74)
     def test_incomplete_previous_output(self):
         p=self.raw/'neterrors_n.jsonl';p.write_text('{"incomplete":');self.runmod(code=74);self.assertEqual(p.read_text(),'{"incomplete":')

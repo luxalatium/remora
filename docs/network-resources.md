@@ -89,6 +89,8 @@ recorded development fixture override, not forwarded to remote worker shells.
 `python3 -B -m unittest discover -s tests -p 'test_network*.py'` runs the original
 eth/ib/opa contract/environment tests and new snapshot fixtures. Python here is
 an optional development harness; it is not installed or executed by modules.
+The hard-link rejection fixture reports SKIP when the test filesystem itself
+rejects hard-link creation; this never relaxes the collector single-link guard.
 On allocated Linux compute, run `tests/network_resources_live.py --prefix PREFIX
 --output NEW_DIRECTORY` for independently read source brackets, complete
 availability evidence, explicit/default selection, shell/native paths and raw
