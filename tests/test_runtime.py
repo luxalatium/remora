@@ -134,8 +134,10 @@ class RuntimeTests(unittest.TestCase):
             )
             self.assertEqual(run.stdout.strip(), str(nodes))
 
-    def test_state_files_use_supplied_tmpdir(self):
-        for name in ["cpu", "eth", "ib", "memory", "opa", "power"]:
+    def test_legacy_state_files_use_supplied_tmpdir(self):
+        # Network run isolation, lock and interrupt behavior use real collectors
+        # in test_network.py rather than requiring a particular state helper.
+        for name in ["cpu", "memory", "power"]:
             source = (SOURCE / "src/C_data_collectors_src" / f"data_collect_{name}.c").read_text()
             self.assertIn('#include "remora_state.h"', source)
             self.assertNotIn(f'fopen("/dev/shm/remora_{name}.tmp"', source)
