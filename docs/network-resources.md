@@ -76,7 +76,9 @@ writer. A PARTIAL snapshot preserves successful fields and error records.
 
 Output/lock/transaction-marker files are owned, single-link regular files opened
 without following symlinks. Reads are nonblocking and bounded; discovery caps
-128 selected entities, directory enumeration is bounded, output caps 8 MiB.
+128 selected entities, 512 GID mappings per port, 8192 records per sample,
+bounded directory enumeration and an 8 MiB output cap. A sample limitation
+field explicitly explains enumeration/record/byte limit failures.
 A pending marker or non-newline-terminated existing output fails closed; preserve
 the run and use a new TMPDIR. No global temp state, workers, process signaling,
 recursive cleanup or destructive finalizer. `REMORA_NETWORK_SYSFS_ROOT` is a

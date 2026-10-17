@@ -123,6 +123,15 @@ class NetworkResources(unittest.TestCase):
         self.put('class/net/eth0/address','a"b\\c\t\n');r=self.records(self.runmod('netinfo'),'address')[0];self.assertEqual(r['raw'],'a"b\\c\t\n\n')
     def test_gid_netdev_mapping(self):
         b=self.fabric();self.put(b+'/gid_attrs/ndevs/0','eth0');self.assertEqual(self.records(self.runmod('netinfo'),'gid_netdev.0')[0]['value'],'eth0')
+    def test_large_gid_table_is_complete(self):
+        b=self.fabric(layer='Ethernet')
+        for i in range(256):self.put(b+'/gid_attrs/ndevs/'+str(i),'eth0')
+        x=self.runmod('netinfo');self.assertEqual(len([r for r in x['records'] if r['metric'].startswith('gid_netdev.')]),256)
+        self.assertIsNone(x['limitation'])
+    def test_gid_bound_is_explicit_partial(self):
+        b=self.fabric()
+        for i in range(513):self.put(b+'/gid_attrs/ndevs/'+str(i),'eth0')
+        x=self.runmod('netinfo',code=74);self.assertEqual(x['limitation'],'gid_mapping_limit_or_invalid_name')
     def test_all_missing_primary_is_unsupported(self):
         b=self.fabric();x=self.runmod('mlxcounters',code=69);self.assertEqual(x['status'],'UNSUPPORTED')
     def test_no_fabric_is_unsupported(self):self.runmod('ibcounters',code=69)

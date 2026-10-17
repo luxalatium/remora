@@ -27,6 +27,7 @@ struct nx_entity { char name[128], base[NX_PATH], driver[128]; int fabric, hfi, 
 static struct nx_entity nx_entities[NX_ENT];
 static unsigned nx_count, nx_records, nx_readable;
 static int nx_bad, nx_first;
+static const char *nx_limit;
 static const char *nx_root, *nx_module;
 static FILE *nx_out;
 static const struct nx_field nx_errors[]={
@@ -110,6 +111,10 @@ static const char *nx_error(int e) {
 /* Every attempt is evidence, including unsupported candidates before fallback. */
 static int nx_record(struct nx_entity *e,const char *metric,const char *path,
                      const char *kind,const char *unit,unsigned scale,int link,int primary) {
+ long position=ftell(nx_out);
+ if(position<0 || position>8*1024*1024-65536 || nx_records>=8192) {
+  nx_bad=1;nx_limit="sample_record_or_byte_limit";return EOVERFLOW;
+ }
  char raw[2048]={0},value[2048]={0};uint64_t number;
  int r=nx_text(path,raw,sizeof raw,link),error=r?errno:0;
  if(!r) {memcpy(value,raw,strlen(raw)+1);nx_trim(value);
@@ -223,7 +228,7 @@ static void nx_metadata(struct nx_entity *e,int primary) {
    char dir[NX_PATH*2],rel[NX_PATH];nx_fmt(rel,sizeof rel,"%s/gid_attrs/ndevs",e->base);nx_fmt(dir,sizeof dir,"%s/%s",nx_root,rel);
    DIR *d=opendir(dir);
    if(d) {struct dirent *de;unsigned seen=0;
-    while((de=readdir(d))) {if(de->d_name[0]=='.') continue;if(++seen>128 || !nx_name(de->d_name)) {nx_bad=1;break;}
+    while((de=readdir(d))) {if(de->d_name[0]=='.') continue;if(++seen>512 || !nx_name(de->d_name)) {nx_bad=1;nx_limit="gid_mapping_limit_or_invalid_name";break;}
      char path[NX_PATH],metric[180];if(nx_fmt(path,sizeof path,"%s/%s",rel,de->d_name) || nx_fmt(metric,sizeof metric,"gid_netdev.%s",de->d_name)) {nx_bad=1;break;}
      nx_record(e,metric,path,"metadata","netdev_name",0,0,1);
     }closedir(d);
@@ -299,6 +304,7 @@ static int remora_netresources_main(const char *module,int argc,char **argv) {
  fputs("],\"records\":[",nx_out);nx_first=1;
  for(unsigned i=0;i<nx_count;i++) {nx_metadata(&nx_entities[i],info);if(!info) nx_counters(&nx_entities[i]);}
  fputs("],",nx_out);nx_time("wall_end",CLOCK_REALTIME);fputc(',',nx_out);nx_time("mono_end",CLOCK_MONOTONIC);
+ fputs(",\"limitation\":",nx_out);nx_quote(nx_limit);
  fprintf(nx_out,",\"status\":\"%s\",\"readable_primary\":%u,\"record_count\":%u}\n",nx_bad?"PARTIAL":nx_readable?"OK":"UNSUPPORTED",nx_readable,nx_records);
  int bad=ferror(nx_out);if(fclose(nx_out)) bad=1;nx_out=NULL;
  if(bad || size>8*1024*1024) goto done;
