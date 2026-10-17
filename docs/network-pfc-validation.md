@@ -5,6 +5,7 @@ Run on an authorized allocated Linux compute node, after a clean build/install:
 ```bash
 python3 -B tests/network_nic_live.py --prefix PREFIX --output NEW_NIC_DIRECTORY
 bash tests/network_pfc_live.sh PREFIX NEW_PFC_DIRECTORY
+bash tests/network_pfc_probe_live.sh NEW_DCB_DIRECTORY
 ```
 
 The first test covers default interface discovery, three native and three Bash
@@ -14,6 +15,23 @@ single-interface selectors for each observed ixgbe Ethernet interface, including
 DOWN interfaces, and separately records read-only PFC/configuration queries.
 These are development oracles; neither test nor its CLI dependencies are
 installed in the collection runtime. Modules remain Bash hooks plus C collectors.
+
+The third test builds `network_pfc_probe.c` with strict GCC and performs only
+`RTM_GETDCB/DCB_CMD_IEEE_GET`. It retains the complete netlink reply as hex,
+kernel errno/stage, site UAPI header, compiler/source/binary hashes and effective
+privileges. Three repetitions per ixgbe interface compare the PFC enable mask,
+eight priority flags and priority-to-TC configuration against before/after DCB
+CLI observations, with interface-index stability checks. The native request and
+indication arrays remain decimal uint64 strings indexed as returned by the
+driver; they are not renamed to per-priority traffic counters. This is a
+development verifier, not an installed resource module.
+
+A readable enable mask of zero proves the observed configuration has all eight
+priorities disabled. A many-to-one priority-to-TC mapping cannot separate
+individual priority traffic from TC or packet-buffer totals. Record disabled
+PFC as the reason for skipping enabled-traffic behavior, while retaining readable
+zero counters. Configuration GET support, configuration state, counter scope and
+traffic behavior remain separate claims.
 
 For each ixgbe interface and each Bash/native path, the supplementary test takes
 three repetitions. It verifies the 32 `rx_pb_[0..7]_pxon/pxoff` and
