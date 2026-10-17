@@ -10,7 +10,8 @@ CLI: `data_collect_MODULE NODE OUTDIR TMPDIR [--check]`. `--check` is source
 discovery only. The collector appends `TMPDIR/MODULE_NODE.jsonl` using
 `remora-network-resources/v1`; see [shared snapshot contract](network-resources.md).
 The additional `proc_root` and `source_snapshots` retain source identity, full
-bounded source text, read status/errno and parse status/errno. Field `raw` is the
+bounded source text, read status/errno and structural parse status/errno. Numeric
+validation failures are recorded separately on the affected field. Field `raw` is the
 original numeric token, with decimal strings in `value`. Embedded NUL/non-ASCII
 source bytes are escaped without normalization, including on malformed input.
 Sources are relative to proc_root. Raw data is never rewritten by finalization.
@@ -73,8 +74,10 @@ layout. `REMORA_NETWORK_PROC_ROOT` is an absolute recorded fixture override,
 not auto-forwarded to remote workers. No sysfs selector affects these modules.
 
 Sources are bounded regular-file, nonblocking reads, <=1MiB each; <=1024tokens
-per line, <=2048softnetrows, <=8192records/8MiB per sample. Limit failures retain
-raw prefixes and explicit limitation. Output/lock/pending files must be owned,
+per line, <=2048softnetrows, <=8192records/8MiB per sample. Source/parse failures
+retain bounded raw prefixes; record/row limits have an explicit limitation.
+An output byte limit or write failure can leave only an incomplete output and
+pending marker; no complete snapshot is promised in that case. Output/lock/pending files must be owned,
 single-link regular files, opened nofollow. Existing non-newline-terminated
 output/pending marker fails closed. A write interrupted by a signal retains a
 pending marker; use a new TMPDIR and preserve the failed evidence.
