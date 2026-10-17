@@ -509,7 +509,18 @@ static int isolated(FILE *out) {
     }
     int pipefd[2];if(pipe(pipefd)) {cleanup_pending();return 74;}
     fflush(NULL);pid_t pid=fork();if(pid<0) {close(pipefd[0]);close(pipefd[1]);cleanup_pending();return 74;}
-    if(!pid) {signal(SIGTERM,SIG_DFL);signal(SIGINT,SIG_DFL);signal(SIGHUP,SIG_DFL);close(pipefd[0]);FILE *f=fdopen(pipefd[1],"w");if(!f) _exit(74);int r=worker(f);if(fclose(f)) r=74;_exit(r);}
+    if(!pid) {
+        signal(SIGTERM,SIG_DFL);signal(SIGINT,SIG_DFL);signal(SIGHUP,SIG_DFL);
+        close(pipefd[0]);
+        FILE *f=fdopen(pipefd[1],"w");
+        if(!f) _exit(74);
+        int r=worker(f);
+        if(fclose(f)) r=74;
+#ifdef REMORA_IO_TESTING
+        if(getenv("IO_TEST_CHILD_TERM_AT_EOF")) raise(SIGTERM);
+#endif
+        _exit(r);
+    }
     close(pipefd[1]);char *buffer=malloc(MAX_OUTPUT+1);size_t used=0;int child_status=0,finished=0,eof=0,bad=0;
     uint64_t deadline=now(CLOCK_MONOTONIC)+(uint64_t)timeout_ms*1000000;
     if(!buffer) bad=1;
@@ -523,7 +534,14 @@ static int isolated(FILE *out) {
         }
         if(!finished) {pid_t rpid=waitpid(pid,&child_status,WNOHANG);if(rpid==pid) finished=1;else if(rpid<0 && errno!=EINTR) {bad=1;break;}}
     }
+#ifdef REMORA_IO_TESTING
+    /* Reproduce a signal delivered during the last EOF/reap loop iteration. */
+    if(finished && eof && getenv("IO_TEST_PARENT_TERM_AT_EOF")) raise(SIGTERM);
+#endif
     close(pipefd[0]);if(!finished) {kill(pid,SIGKILL);while(waitpid(pid,&child_status,0)<0 && errno==EINTR) {}finished=1;}
+    /* EOF/reap can finish the loop in the same iteration that delivered a
+       signal. Honor it before interpreting child status or committing output. */
+    if(interrupted) bad=3;
     int code=WIFEXITED(child_status)?WEXITSTATUS(child_status):74;
     if(bad || (code!=0 && code!=10)) {
         invalidate_state();if(bad==3) code=128+interrupted;
@@ -618,10 +636,11 @@ int main(int argc,char **argv) {
     signal(SIGTERM,on_signal);signal(SIGINT,on_signal);signal(SIGHUP,on_signal);signal(SIGPIPE,SIG_IGN);
     int result=0;
     for(unsigned j=0;j<6;j++) if(selected[j]) {
+        if(interrupted) {result=128+interrupted;break;}
         provider=providers[j];int r=isolated(output);if(r>=128 || r==74) {result=r;break;}if(r) result=allow_partial?0:2;
     }
     if(output!=stdout && fclose(output)) result=74;
     if(lock>=0) close(lock);
     if(state_dir>=0) close(state_dir);
-    return result;
+    return interrupted?128+interrupted:result;
 }

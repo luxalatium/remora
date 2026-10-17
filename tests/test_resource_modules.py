@@ -323,6 +323,20 @@ static uid_t test_geteuid(void) {return geteuid()+(getenv("IO_TEST_OTHER_UID")?1
         finally:
             unrelated.terminate();unrelated.wait()
 
+    def test_signal_at_provider_eof_discards_output_and_pending_state(self):
+        for child_term in (False, True):
+            with self.subTest(child_term=child_term):
+                self.call()
+                extra = {'IO_TEST_PARENT_TERM_AT_EOF': '1'}
+                if child_term:
+                    extra['IO_TEST_CHILD_TERM_AT_EOF'] = '1'
+                run = subprocess.run(self.command(), env=dict(self.env, **extra),
+                                     capture_output=True, text=True, timeout=6)
+                self.assertEqual(run.returncode, 143, run.stdout + run.stderr)
+                self.assertEqual(run.stdout, '')
+                self.assertFalse(list(self.state.glob('*.next-*')))
+                self.assertEqual(self.metric(self.call())['interval']['status'], 'GAP')
+
     def test_node_qualified_handles_and_literal_paths(self):
         row = self.call('process', extra={'REMORA_RESOURCE_PROCESS_HANDLES': 'other 9999:1\nnode 4242:77'})
         self.assertEqual([e['target'] for e in row['entities']], ['4242:77'])

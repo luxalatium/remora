@@ -158,7 +158,9 @@ limit is explicit failure, not silent truncation. Nonregular input files are
 rejected using nonblocking opens; partial line-oriented raw sources are rejected.
 A deadline discards incomplete JSON, emits a TIMEOUT record and invalidates that
 provider's state. TERM/INT/HUP terminate and reap only the owned provider child,
-returning 128+signal; no wildcard process killing is used. Kernel-uninterruptible
+returning 128+signal; a signal arriving with the last provider EOF/reap also
+discards pending output/state rather than reporting a provider failure or a
+successful completion. No wildcard process killing is used. Kernel-uninterruptible
 filesystem calls can delay child reaping despite SIGKILL; local tests validate
 interruptible owned-worker cleanup, not a guarantee about every kernel failure.
 
