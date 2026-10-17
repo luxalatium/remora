@@ -118,3 +118,5 @@ Sources: [Linux netdev statistics](https://docs.kernel.org/networking/statistics
 [Linux InfiniBand sysfs ABI](https://github.com/torvalds/linux/blob/master/Documentation/ABI/stable/sysfs-class-infiniband),
 [Cornelis hfi1 counter definitions](https://github.com/cornelisnetworks/opa-hfi1/blob/bfb3da47c6f90d89015c7c7ce01c88a4e7581c7c/drivers/infiniband/hw/hfi1/chip.c).
 See also [legacy network contract](network-modules.md).
+
+NIC driver buffer/queue/discard and pause/PFC/FEC definitions: [network-nic-resources.md](network-nic-resources.md).

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Read-only driver counters; C collector, no Python runtime.
+init_module_linkhealth() { "$REMORA_BIN/binary_data_collectors/data_collect_linkhealth" "$1" "$2" "$3" --check; }
+collect_data_linkhealth() { "$REMORA_BIN/binary_data_collectors/data_collect_linkhealth" "$1" "$2" "$3"; }
+process_data_linkhealth() { :; }
+plot_data_linkhealth() { :; }
+monitor_data_linkhealth() { :; }
+finalize_module_linkhealth() { :; }

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Read-only driver counters; C collector, no Python runtime.
+init_module_nicstats() { "$REMORA_BIN/binary_data_collectors/data_collect_nicstats" "$1" "$2" "$3" --check; }
+collect_data_nicstats() { "$REMORA_BIN/binary_data_collectors/data_collect_nicstats" "$1" "$2" "$3"; }
+process_data_nicstats() { :; }
+plot_data_nicstats() { :; }
+monitor_data_nicstats() { :; }
+finalize_module_nicstats() { :; }

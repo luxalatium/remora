@@ -154,6 +154,18 @@
       "kind": "collector",
       "requires": [],
       "entry": "softnet,NETWORK"
+    },
+    "nicstats": {
+      "default": "off",
+      "kind": "collector",
+      "requires": [],
+      "entry": "nicstats,NETWORK"
+    },
+    "linkhealth": {
+      "default": "off",
+      "kind": "collector",
+      "requires": [],
+      "entry": "linkhealth,NETWORK"
     }
   }
 }

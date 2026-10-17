@@ -131,3 +131,18 @@ data_collect_softnet: data_collect_softnet.o
 	$(CC) $< -o $(BUILD_DIR)/$@
 
 data_collect_netprotocol.o data_collect_softnet.o: remora_procnet.h
+
+# Read-only driver statistics modules (default-off in installer).
+OBJECTS += data_collect_nicstats.o data_collect_linkhealth.o
+BINARIES += data_collect_nicstats data_collect_linkhealth
+all: data_collect_nicstats data_collect_linkhealth
+
+data_collect_nicstats: data_collect_nicstats.o
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $< -o $(BUILD_DIR)/$@
+
+data_collect_linkhealth: data_collect_linkhealth.o
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $< -o $(BUILD_DIR)/$@
+
+data_collect_nicstats.o data_collect_linkhealth.o: remora_nicstats.h remora_nicfields.h
