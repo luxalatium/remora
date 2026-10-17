@@ -514,7 +514,7 @@ static int isolated(FILE *out) {
     int code=WIFEXITED(child_status)?WEXITSTATUS(child_status):74;
     if(bad || (code!=0 && code!=10)) {
         invalidate_state();if(bad==3) code=128+interrupted;
-        else {entities=NULL;count=raw_count=0;status=bad==2?"TIMEOUT":"INVALID";reason=bad==2?"PROVIDER_DEADLINE":bad==4?"OUTPUT_LIMIT":"PROVIDER_FAILURE";start_ns=end_ns=now(CLOCK_MONOTONIC);identity();emit(out);code=10;}
+        else {entities=NULL;count=raw_count=0;status=bad==2?"TIMEOUT":"INVALID";reason=bad==2?"PROVIDER_DEADLINE":bad==4?"OUTPUT_LIMIT":"PROVIDER_FAILURE";start_ns=end_ns=now(CLOCK_MONOTONIC);boot[0]=ns[0]=0;emit(out);code=10;}
     } else if(used && buffer[used-1]=='\n') {if(fwrite(buffer,1,used,out)!=used) code=74;}
     else {invalidate_state();code=74;}
     if(fflush(out)) code=74;

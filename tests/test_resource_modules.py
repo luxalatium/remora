@@ -338,6 +338,13 @@ static uid_t test_geteuid(void) {return geteuid()+(getenv("IO_TEST_OTHER_UID")?1
         row = self.call('block')
         self.assertEqual(self.metric(row, 'read_ios')['interval']['status'], 'IDENTITY_UNKNOWN')
 
+    def test_context_read_deadline_does_not_retry_source_in_parent(self):
+        ready = self.root / 'ready-context'
+        row = self.call('nfs', '--timeout-ms', '100', expect=2, extra={'IO_TEST_FAULT_PATH': '/proc/sys/kernel/random/boot_id', 'IO_TEST_READY': str(ready)})
+        self.assertEqual(row['status'], 'TIMEOUT')
+        self.assertIsNone(row['context']['boot_id'])
+        with self.assertRaises(ProcessLookupError): os.kill(int(ready.read_text()), 0)
+
     def test_mount_table_race_invalidates_counters(self):
         row = self.call(expect=2, extra={'IO_TEST_FAULT_PATH': '/proc/self/mountstats', 'IO_TEST_RACE_STAT': '/proc/self/mountinfo'})
         self.assertEqual(row['reason'], 'MOUNT_TABLE_CHANGED')
