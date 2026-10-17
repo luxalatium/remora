@@ -1,6 +1,6 @@
 # Optional user-space network resources (v1)
 
-These five Bash modules call installed C collectors. They require no Python,
+These five sysfs Bash modules call installed C collectors. They require no Python,
 root, UMAD access, daemon, external network command or sysfs writes. They are
 independently selectable and default to **off**; existing eth/ib/opa files and
 plots are unchanged. Enable desired modules with the installer, for example
@@ -32,6 +32,10 @@ port 2 is supported. An explicit missing/wrong-family entity fails without
 substitution. neterrors defaults to all type=1 netdevs, including DOWN, with
 loopback/IPoIB available through explicit selection. netinfo defaults to all
 netdevs. Names/globs/traversal/duplicates/empty explicit lists are rejected.
+
+The additional [netprotocol and softnet modules](network-proc-resources.md)
+collect protocol-stack and host/per-CPU proc counters using the same snapshot
+envelope with preserved source text. They are also default-off Bash/C modules.
 
 ## Snapshot data contract
 

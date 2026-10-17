@@ -107,3 +107,10 @@ three repetitions of each native/Bash module path, verifies exact explicit
 selection and finalizer preservation. Run only on allocated compute; preserve
 raw JSONL plus before/after readings, commands, return codes and checksums.
 See `docs/network-resources.md`. Unsupported families remain SKIP.
+
+`test_network_proc.py` extends the standard network fixture suite for the
+Bash/C netprotocol and softnet modules. On allocated Linux compute,
+`network_proc_live.py --prefix PREFIX --output NEW_DIR` preserves three
+repetitions per Bash/native path, independent before/after proc sources,
+units/CPU/header mapping checks and raw finalization hashes. Development Python
+is not installed in the collection runtime.

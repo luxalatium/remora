@@ -116,3 +116,18 @@ data_collect_opacounters: data_collect_opacounters.o
 	@$(CC) $< -o $(BUILD_DIR)/$@
 
 data_collect_opacounters.o: remora_netresources.h
+
+# Optional proc network-resource snapshots.
+OBJECTS += data_collect_netprotocol.o data_collect_softnet.o
+BINARIES += data_collect_netprotocol data_collect_softnet
+all: data_collect_netprotocol data_collect_softnet
+
+data_collect_netprotocol: data_collect_netprotocol.o
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $< -o $(BUILD_DIR)/$@
+
+data_collect_softnet: data_collect_softnet.o
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $< -o $(BUILD_DIR)/$@
+
+data_collect_netprotocol.o data_collect_softnet.o: remora_procnet.h

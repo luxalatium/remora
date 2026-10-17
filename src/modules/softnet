@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Read-only host/per-CPU softnet snapshots, compiled C; no Python runtime.
+init_module_softnet() { "$REMORA_BIN/binary_data_collectors/data_collect_softnet" "$1" "$2" "$3" --check; }
+collect_data_softnet() { "$REMORA_BIN/binary_data_collectors/data_collect_softnet" "$1" "$2" "$3"; }
+process_data_softnet() { :; }
+plot_data_softnet() { :; }
+monitor_data_softnet() { :; }
+finalize_module_softnet() { :; }

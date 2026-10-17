@@ -133,7 +133,7 @@ if [[ $IMPLEMENTATION == shell ]]; then
     init_rc=$?
     printf '%s\n' "$init_rc" > "$CASE/init.rc"
     if ((init_rc != 0)); then
-        if [[ $MODULE == eth || $MODULE == ib || $MODULE == opa || $MODULE == netinfo || $MODULE == neterrors || $MODULE == ibcounters || $MODULE == mlxcounters || $MODULE == opacounters ]] && ((init_rc == 69)); then
+        if [[ $MODULE == eth || $MODULE == ib || $MODULE == opa || $MODULE == netinfo || $MODULE == neterrors || $MODULE == ibcounters || $MODULE == mlxcounters || $MODULE == opacounters || $MODULE == netprotocol || $MODULE == softnet ]] && ((init_rc == 69)); then
             unsupported 'no eligible network interface/port or installed reader'
         fi
         result FAIL "module init failed (exit $init_rc); backend was prechecked"
@@ -145,7 +145,7 @@ else
     rc=$?
     printf '%s\n' "$rc" > "$CASE/warmup.rc"
     if ((rc != 0)); then
-        if [[ $MODULE == eth || $MODULE == ib || $MODULE == opa || $MODULE == netinfo || $MODULE == neterrors || $MODULE == ibcounters || $MODULE == mlxcounters || $MODULE == opacounters ]] && ((rc == 69)); then
+        if [[ $MODULE == eth || $MODULE == ib || $MODULE == opa || $MODULE == netinfo || $MODULE == neterrors || $MODULE == ibcounters || $MODULE == mlxcounters || $MODULE == opacounters || $MODULE == netprotocol || $MODULE == softnet ]] && ((rc == 69)); then
             unsupported 'no eligible network interface/port'
         fi
         result FAIL "collector warmup failed (exit $rc)"
@@ -163,7 +163,7 @@ for ((sample = 1; sample <= SAMPLES; sample++)); do
     printf '%s\n' "$rc" > "$CASE/sample-$sample.rc"
     if ((rc != 0)); then
         case $MODULE in
-            netinfo | neterrors | ibcounters | mlxcounters | opacounters)
+            netinfo | neterrors | ibcounters | mlxcounters | opacounters | netprotocol | softnet)
                 if ((rc == 69)); then unsupported 'no readable primary network resource fields; raw availability records retained'; fi
                 ;;
         esac
@@ -177,7 +177,7 @@ done
 snapshot after
 
 case $MODULE in
-    netinfo | neterrors | ibcounters | mlxcounters | opacounters)
+    netinfo | neterrors | ibcounters | mlxcounters | opacounters | netprotocol | softnet)
         file="$RAW/${MODULE}_${NODE}.jsonl"
         if [[ -s $file ]] && jq -e -s --arg module_name "$MODULE" --argjson samples "$SAMPLES" '
             length >= $samples and all(.[];

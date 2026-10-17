@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Read-only TCP/UDP/TcpExt snapshots, compiled C; no Python runtime.
+init_module_netprotocol() { "$REMORA_BIN/binary_data_collectors/data_collect_netprotocol" "$1" "$2" "$3" --check; }
+collect_data_netprotocol() { "$REMORA_BIN/binary_data_collectors/data_collect_netprotocol" "$1" "$2" "$3"; }
+process_data_netprotocol() { :; }
+plot_data_netprotocol() { :; }
+monitor_data_netprotocol() { :; }
+finalize_module_netprotocol() { :; }

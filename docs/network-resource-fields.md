@@ -163,3 +163,10 @@ Associated entity metadata from netinfo is also emitted, except GID mappings.
 
 Sources: `class/infiniband/DEV/ports/PORT/hw_counters/FIELD` relative to `/sys`.
 Associated entity metadata from netinfo is also emitted, except GID mappings.
+
+## netprotocol and softnet
+
+See the [proc field/unit/scope reference](network-proc-resources.md) for fifteen
+Tcp/Udp/TcpExt counters and three host/per-CPU softnet counters plus CPU/layout
+metadata. Their source is proc rather than sysfs; no interface/port selector
+affects them. Source read state and parse state are recorded separately.
