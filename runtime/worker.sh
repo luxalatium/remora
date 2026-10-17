@@ -58,8 +58,18 @@ case $MODULE in
         require_file /proc/meminfo
         ;;
     numa)
-        require_tool numastat
-        if [[ $IMPLEMENTATION == collector ]]; then
+        NUMA_NATIVE="$PREFIX/bin/binary_data_collectors/data_collect_numa"
+        [[ -x $NUMA_NATIVE ]] || blocked 'NUMA module requires its installed native collector'
+        if "$NUMA_NATIVE" --describe > "$CASE/numa-description.json" 2> "$CASE/numa-description.stderr" &&
+            grep -q '"schema":"remora-numa/v1"' "$CASE/numa-description.json"; then
+            NUMA_KEYED=1
+            "$NUMA_NATIVE" --check > "$CASE/numa-check.stdout" 2> "$CASE/numa-check.stderr"
+            rc=$?
+            ((rc != 69)) || unsupported 'NUMA sysfs nodes unavailable'
+            ((rc == 0)) || blocked "NUMA required kernel fields unavailable/invalid (exit $rc)"
+        else
+            NUMA_KEYED=0
+            require_tool numastat
             count=$(numastat -m | numa_node_count)
             [[ $count == 2 ]] || blocked "legacy C NUMA layout is fixed to two nodes; observed ${count:-unknown}; do not risk its fixed-size arrays"
         fi
@@ -76,17 +86,13 @@ case $MODULE in
         nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits > "$CASE/gpu-count.txt" 2> "$CASE/gpu-query.stderr" || blocked 'NVIDIA telemetry inaccessible; inspect gpu-query.stderr'
         GPU_COUNT=$(wc -l < "$CASE/gpu-count.txt")
         ((GPU_COUNT > 0)) || unsupported 'no visible NVIDIA devices'
-        [[ $IMPLEMENTATION != shell ]] || require_tool bc
         ;;
-    power)
-        if [[ ! -r /sys/devices/virtual/powercap/intel-rapl/intel-rapl:0/energy_uj ]]; then
-            if [[ $IMPLEMENTATION == shell ]] && command -v sensors > /dev/null 2>&1 && sensors | grep -q power1; then
-                :
-            else unsupported 'legacy Intel RAPL/power1 backend not readable on this node'; fi
-        fi
-        ;;
-    temperature)
-        compgen -G '/sys/devices/platform/coretemp.*/hwmon/hwmon*/temp*_input' > /dev/null || unsupported 'legacy coretemp backend not exposed on this node'
+    power | temperature | hwmon | powercap | nvml)
+        # Generic native discovery supports named powercap and hwmon backends.
+        "$PREFIX/bin/binary_data_collectors/data_collect_$MODULE" --check > "$CASE/backend.stdout" 2> "$CASE/backend.stderr"
+        backend_rc=$?
+        [[ $backend_rc != 69 ]] || unsupported 'no supported sensor backend exposed'
+        [[ $backend_rc == 0 ]] || blocked "sensor backend check failed (exit $backend_rc)"
         ;;
     lnet) require_file /proc/sys/lnet/stats ;;
     lustre)
@@ -141,7 +147,11 @@ if [[ $IMPLEMENTATION == shell ]]; then
     fi
 else
     # Prime stateful collectors; their first call intentionally has no interval sample.
-    "$ARTIFACT" "$NODE" "$CASE/out" "$RAW" > "$CASE/warmup.stdout" 2> "$CASE/warmup.stderr"
+    if [[ $MODULE == power || $MODULE == temperature || $MODULE == hwmon || $MODULE == powercap || $MODULE == nvml ]]; then
+        "$ARTIFACT" --initialize "$NODE" "$CASE/out" "$RAW" > "$CASE/warmup.stdout" 2> "$CASE/warmup.stderr"
+    else
+        "$ARTIFACT" "$NODE" "$CASE/out" "$RAW" > "$CASE/warmup.stdout" 2> "$CASE/warmup.stderr"
+    fi
     rc=$?
     printf '%s\n' "$rc" > "$CASE/warmup.rc"
     if ((rc != 0)); then
@@ -193,6 +203,32 @@ case $MODULE in
         ;;
 esac
 
+if [[ $MODULE == power || $MODULE == temperature || $MODULE == hwmon || $MODULE == powercap || $MODULE == nvml ]]; then
+    case $MODULE in power | temperature) file="$RAW/${MODULE}_metadata_$NODE.jsonl" ;; *) file="$RAW/${MODULE}_$NODE.jsonl" ;; esac
+    if [[ ! -s $file ]] || ! jq -s -e '''
+       length>0 and all(.[]; .schema=="remora-sensor-sample/v1" and
+         (.read_end_monotonic_s>=.read_start_monotonic_s) and
+         (if .status=="PASS" then (.value|type)=="number" else .value==null end)) and
+       any(.[]; .status=="PASS")
+    ''' "$file" > "$CASE/schema-validation.json" 2> "$CASE/schema-validation.stderr"; then
+        result FAIL 'native sensor contract empty or invalid'; exit 0
+    fi
+    if [[ $MODULE == power || $MODULE == temperature ]]; then
+        if [[ $MODULE == power ]]; then wide=("$RAW/power_$NODE.txt"); else wide=("$RAW"/temperature_cpu*"_$NODE.txt"); fi
+        for table in "${wide[@]}"; do
+            [[ -s $table ]] && awk -v minimum="$SAMPLES" '''
+              function number(x) { return x ~ /^[-+]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][-+]?[0-9]+)?$/ }
+              NR==1 {width=NF;next}
+              {if(NF!=width || !number($1) || (rows && $1<=previous))bad=1;
+               for(i=2;i<=NF;i++)if($i!="NA" && !number($i))bad=1;previous=$1;rows++}
+              END {exit bad || rows<minimum || width<2}
+            ''' "$table" || { result FAIL 'legacy sensor table malformed/incomplete'; exit 0; }
+        done
+    fi
+    result PASS 'native sensor samples valid; per-field unsupported/permission status retained' PASS OPEN
+    exit 0
+fi
+
 width=0 cpu=0
 case $MODULE in
     cpu)
@@ -205,7 +241,9 @@ case $MODULE in
         ;;
     numa)
         files=("$RAW/numa_stats_$NODE.txt")
-        if [[ $IMPLEMENTATION == collector ]]; then width=26; fi
+        if [[ ${NUMA_KEYED:-0} == 1 ]]; then
+            width=$(awk 'NR==1 {print NF;exit}' "${files[0]}")
+        elif [[ $IMPLEMENTATION == collector ]]; then width=26; fi
         ;;
     eth)
         files=("$RAW/network_eth_traffic-$NODE.txt")
@@ -238,10 +276,11 @@ for file in "${files[@]}"; do
 done
 # A bounded smoke is not a numerical-accuracy claim. Preserve known unit defects.
 if [[ $MODULE == gpu && $IMPLEMENTATION == shell ]]; then
-    result FAIL 'available, but shell module divides nvidia-smi MiB by 1000 and labels GB; decimal GB needs MiB*1048576/1e9' PASS FAIL DERIVED
-elif [[ $MODULE == power && $IMPLEMENTATION == shell ]] &&
-    grep -q '^export REMORA_POWER_COLLECTOR=intel_rapl$' "$CASE/out/remora_env.txt"; then
-    result FAIL 'available, but legacy RAPL shell divides microjoules by 1000 then by seconds, overstating watts by 1000; TIME(ms) contains seconds' PASS FAIL DERIVED
+    if head -n 1 "${files[0]}" | grep -q '_avail_GiB'; then
+        result PASS 'GPU MiB converted to explicitly labelled GiB; source oracle qualification is separate' PASS OPEN
+    else
+        result FAIL 'legacy GPU MiB/1000 values have incorrect GB labels' PASS FAIL DERIVED
+    fi
 elif [[ $MODULE == ib || $MODULE == opa ]]; then
     if [[ -s $RAW/network-$MODULE-$NODE.raw.tsv ]] && grep -q '^# remora-network/v1' "$RAW/network-$MODULE-$NODE.raw.tsv"; then
         result PASS 'versioned source/unit evidence and complete intervals; independent oracle qualification still OPEN' PASS OPEN
