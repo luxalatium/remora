@@ -7,6 +7,8 @@ of resources used for a running application. The collected information included:
     - Memory usage
     - MPI usage
     - I/O load (Lustre, DVS)
+    - Optional user-space I/O resources (Bash/C): mounts/capacity, NFS,
+      explicit process I/O, local block/tmp; see docs/io-resources.md
     - NUMA memory
     - Network topology
 

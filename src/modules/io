@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Optional native providers; see docs/io-resources.md. No Python runtime.
+init_module_io() {
+    [[ -n $1 && $1 != *[!a-zA-Z0-9._-]* && $1 != . && $1 != .. ]] || return 2
+    [[ -d $3 && ! -L $3 && -x $REMORA_BIN/binary_data_collectors/data_collect_io ]] || return 2
+    "$REMORA_BIN/binary_data_collectors/data_collect_io" --check --node "$1" || return
+    # One writer per run/node; preserve an existing run rather than truncating it.
+    (umask 077; set -C; : > "$3/io_$1.jsonl") || return 2
+}
+collect_data_io() {
+    "$REMORA_BIN/binary_data_collectors/data_collect_io" "$1" "$2" "$3"
+}
+process_data_io() { :; }
+plot_data_io() { :; }
+monitor_data_io() { :; }
+finalize_module_io() { :; }

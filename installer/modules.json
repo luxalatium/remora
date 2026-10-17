@@ -98,6 +98,13 @@
       "requires": [],
       "entry": "lnet,IO"
     },
+    "io": {
+      "default": "off",
+      "kind": "collector",
+      "requires": [],
+      "entry": "io,IO",
+      "artifacts": ["bin/binary_data_collectors/data_collect_io"]
+    },
     "dvs": {
       "default": "off",
       "kind": "shell",

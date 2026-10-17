@@ -173,6 +173,18 @@ exec /bin/mv "$@"
         self.assertFalse((self.prefix / "bin/binary_data_collectors/data_collect_gpu").exists())
         self.assertEqual(json.loads((self.prefix / "build-manifest.json").read_text())["build"]["runtime_qualification"], "NOT_RUN")
 
+    def test_optional_io_provider_installs_native_collector(self):
+        self.assertEqual(self.config({"io": "on"}), 0)
+        self.assertEqual(self.plan()["selected"], ["io"])
+        self.build_install()
+        self.assertEqual((self.prefix / "bin/config/modules").read_text(), "io,IO\n")
+        self.assertTrue((self.prefix / "bin/modules/io").is_file())
+        self.assertTrue((self.prefix / "bin/binary_data_collectors/data_collect_io").is_file())
+        self.assertFalse((self.prefix / "bin/resource_modules").exists())
+        self.assertFalse((self.prefix / "bin/remora_resources").exists())
+        self.assertFalse((self.prefix / "bin/config/resource-python").exists())
+        self.assertEqual(json.loads((self.prefix / "build-manifest.json").read_text())["build"]["runtime_qualification"], "NOT_RUN")
+
     def assert_progress_order(self, phase, messages):
         position = 0
         for message in messages:

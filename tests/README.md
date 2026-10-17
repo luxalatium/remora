@@ -75,3 +75,20 @@ Unsupported modules are SKIP with observed exit69; denied/broken backends FAIL.
 A source-level unit mapping plus sysfs oracle is not an end-to-end fabric payload
 or overhead measurement. Multi-node payload and formal repeated overhead tests
 remain separate qualification levels, requiring their own allocation envelope.
+
+## Optional I/O resources
+
+The Bash/C provider contract and selection catalog are in
+[io-resources.md](../docs/io-resources.md). Run the focused developer suite with:
+
+```bash
+python3 -B -m unittest discover -s tests -p 'test_resource*.py' -v
+python3 -B -m unittest discover -s tests -p test_installer.py -k io -v
+```
+
+The first suite compiles native collectors (`REMORA_IO_TEST_CC` overrides the
+compiler command) and uses synthetic proc/sysfs data, test-only syscall doubles,
+owned worker processes and temporary state. Production rejects fixture-root
+options and has no Python resource runtime. The installer suite uses synthetic
+ELF artifacts and does not execute them. These checks do not claim HPC runtime,
+filesystem accuracy, full legacy-daemon cleanup or monitoring overhead acceptance.

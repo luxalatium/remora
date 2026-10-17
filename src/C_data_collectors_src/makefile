@@ -2,9 +2,9 @@
 CC = gcc
 CXXFLAGS=-O3
 
-OBJECTS += data_collect_cpu.o data_collect_eth.o data_collect_ib.o data_collect_memory.o data_collect_numa.o data_collect_opa.o data_collect_power.o data_collect_temperature.o
+OBJECTS += data_collect_io.o data_collect_cpu.o data_collect_eth.o data_collect_ib.o data_collect_memory.o data_collect_numa.o data_collect_opa.o data_collect_power.o data_collect_temperature.o
 
-BINARIES += data_collect_cpu data_collect_eth data_collect_ib data_collect_memory data_collect_numa data_collect_opa data_collect_power data_collect_temperature
+BINARIES += data_collect_io data_collect_cpu data_collect_eth data_collect_ib data_collect_memory data_collect_numa data_collect_opa data_collect_power data_collect_temperature
 
 ifeq ($(shell ldconfig -p | grep libnvidia-ml >& /dev/null && echo 1 || echo 0), 1)
 OBJECTS  += data_collect_gpu.o
@@ -15,6 +15,11 @@ BUILD_DIR=../binary_data_collectors
 
 all: $(BINARIES)
 	@make clean
+
+data_collect_io: data_collect_io.o
+	$(shell mkdir -p $(BUILD_DIR))
+	@$(CC) data_collect_io.o -o $(BUILD_DIR)/data_collect_io
+	$(info [CC] Building data_collect_io)
 
 data_collect_cpu: data_collect_cpu.o
 	$(shell mkdir -p $(BUILD_DIR))
