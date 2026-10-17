@@ -1,0 +1,641 @@
+! Native MPI F08 wrappers: compiler owns descriptors, handles and statuses.
+module mpip_f08_support
+  use iso_c_binding
+  use mpi_f08
+  implicit none
+  interface
+    function f08_begin(name) bind(C,name="mpip_f08_begin") result(token)
+      import c_char,c_ptr
+      character(kind=c_char) :: name(*)
+      type(c_ptr) :: token
+    end function
+    subroutine f08_end(token,mess,io,rma) bind(C,name="mpip_f08_end")
+      import c_ptr,c_double
+      type(c_ptr),value :: token
+      real(c_double),value :: mess,io,rma
+    end subroutine
+  end interface
+contains
+  recursive function payload(datatype,count) result(bytes)
+    type(MPI_Datatype) :: datatype
+    integer :: count,tsize,err
+    real(c_double) :: bytes
+    call PMPI_Type_size(datatype,tsize,err)
+    bytes=0.0_c_double
+    if (err==MPI_SUCCESS .and. count>=0) bytes=real(tsize,c_double)*real(count,c_double)
+  end function
+  recursive function comm_size(comm) result(n)
+    type(MPI_Comm) :: comm
+    integer :: count,err
+    real(c_double) :: n
+    call PMPI_Comm_size(comm,count,err)
+    n=0.0_c_double
+    if (err==MPI_SUCCESS) n=real(count,c_double)
+  end function
+end module
+
+recursive subroutine mpip_f08_barrier(comm,ierror)
+  use mpip_f08_support
+  implicit none
+  type(MPI_Comm) :: comm
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Barrier"//c_null_char)
+  call PMPI_Barrier(comm,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_send(buf,count,datatype,dest,tag,comm,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: buf
+  integer :: count,dest,tag
+  type(MPI_Datatype) :: datatype
+  type(MPI_Comm) :: comm
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=payload(datatype,count)
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Send"//c_null_char)
+  call PMPI_Send(buf,count,datatype,dest,tag,comm,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_ssend(buf,count,datatype,dest,tag,comm,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: buf
+  integer :: count,dest,tag
+  type(MPI_Datatype) :: datatype
+  type(MPI_Comm) :: comm
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=payload(datatype,count)
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Ssend"//c_null_char)
+  call PMPI_Ssend(buf,count,datatype,dest,tag,comm,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_bsend(buf,count,datatype,dest,tag,comm,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: buf
+  integer :: count,dest,tag
+  type(MPI_Datatype) :: datatype
+  type(MPI_Comm) :: comm
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=payload(datatype,count)
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Bsend"//c_null_char)
+  call PMPI_Bsend(buf,count,datatype,dest,tag,comm,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_rsend(buf,count,datatype,dest,tag,comm,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: buf
+  integer :: count,dest,tag
+  type(MPI_Datatype) :: datatype
+  type(MPI_Comm) :: comm
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=payload(datatype,count)
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Rsend"//c_null_char)
+  call PMPI_Rsend(buf,count,datatype,dest,tag,comm,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_recv(buf,count,datatype,source,tag,comm,status,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: buf
+  integer :: count,source,tag
+  type(MPI_Datatype) :: datatype
+  type(MPI_Comm) :: comm
+  type(MPI_Status) :: status
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Recv"//c_null_char)
+  call PMPI_Recv(buf,count,datatype,source,tag,comm,status,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_sendrecv(sendbuf,sendcount,sendtype,dest,sendtag,recvbuf,recvcount, &
+    & recvtype,source,recvtag,comm,status,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: sendbuf,recvbuf
+  integer :: sendcount,dest,sendtag,recvcount,source,recvtag
+  type(MPI_Datatype) :: sendtype,recvtype
+  type(MPI_Comm) :: comm
+  type(MPI_Status) :: status
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=payload(sendtype,sendcount)
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Sendrecv"//c_null_char)
+  call PMPI_Sendrecv(sendbuf,sendcount,sendtype,dest,sendtag,recvbuf,recvcount,recvtype, &
+    & source,recvtag,comm,status,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_isend(buf,count,datatype,dest,tag,comm,request,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: buf
+  integer :: count,dest,tag
+  type(MPI_Datatype) :: datatype
+  type(MPI_Comm) :: comm
+  type(MPI_Request) :: request
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=payload(datatype,count)
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Isend"//c_null_char)
+  call PMPI_Isend(buf,count,datatype,dest,tag,comm,request,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_irecv(buf,count,datatype,source,tag,comm,request,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: buf
+  integer :: count,source,tag
+  type(MPI_Datatype) :: datatype
+  type(MPI_Comm) :: comm
+  type(MPI_Request) :: request
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Irecv"//c_null_char)
+  call PMPI_Irecv(buf,count,datatype,source,tag,comm,request,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_wait(request,status,ierror)
+  use mpip_f08_support
+  implicit none
+  type(MPI_Request) :: request
+  type(MPI_Status) :: status
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Wait"//c_null_char)
+  call PMPI_Wait(request,status,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_waitall(count,array_of_requests,array_of_statuses,ierror)
+  use mpip_f08_support
+  implicit none
+  integer :: count
+  type(MPI_Request) :: array_of_requests(*)
+  type(MPI_Status) :: array_of_statuses(*)
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Waitall"//c_null_char)
+  call PMPI_Waitall(count,array_of_requests,array_of_statuses,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_bcast(buffer,count,datatype,root,comm,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: buffer
+  integer :: count,root
+  type(MPI_Datatype) :: datatype
+  type(MPI_Comm) :: comm
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=payload(datatype,count)
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Bcast"//c_null_char)
+  call PMPI_Bcast(buffer,count,datatype,root,comm,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_allreduce(sendbuf,recvbuf,count,datatype,op,comm,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: sendbuf,recvbuf
+  integer :: count
+  type(MPI_Datatype) :: datatype
+  type(MPI_Op) :: op
+  type(MPI_Comm) :: comm
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=payload(datatype,count)
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Allreduce"//c_null_char)
+  call PMPI_Allreduce(sendbuf,recvbuf,count,datatype,op,comm,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_iallreduce(sendbuf,recvbuf,count,datatype,op,comm,request,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: sendbuf,recvbuf
+  integer :: count
+  type(MPI_Datatype) :: datatype
+  type(MPI_Op) :: op
+  type(MPI_Comm) :: comm
+  type(MPI_Request) :: request
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=payload(datatype,count)
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Iallreduce"//c_null_char)
+  call PMPI_Iallreduce(sendbuf,recvbuf,count,datatype,op,comm,request,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_reduce(sendbuf,recvbuf,count,datatype,op,root,comm,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: sendbuf,recvbuf
+  integer :: count
+  type(MPI_Datatype) :: datatype
+  type(MPI_Op) :: op
+  type(MPI_Comm) :: comm
+  integer :: root
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=payload(datatype,count)
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Reduce"//c_null_char)
+  call PMPI_Reduce(sendbuf,recvbuf,count,datatype,op,root,comm,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_allgather(sendbuf,sendcount,sendtype,recvbuf,recvcount,recvtype,comm, &
+    & ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: sendbuf,recvbuf
+  integer :: sendcount,recvcount
+  type(MPI_Datatype) :: sendtype,recvtype
+  type(MPI_Comm) :: comm
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=payload(sendtype,sendcount)
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Allgather"//c_null_char)
+  call PMPI_Allgather(sendbuf,sendcount,sendtype,recvbuf,recvcount,recvtype,comm,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_alltoall(sendbuf,sendcount,sendtype,recvbuf,recvcount,recvtype,comm, &
+    & ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: sendbuf,recvbuf
+  integer :: sendcount,recvcount
+  type(MPI_Datatype) :: sendtype,recvtype
+  type(MPI_Comm) :: comm
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=payload(sendtype,sendcount) * comm_size(comm)
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Alltoall"//c_null_char)
+  call PMPI_Alltoall(sendbuf,sendcount,sendtype,recvbuf,recvcount,recvtype,comm,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_comm_split(comm,color,key,newcomm,ierror)
+  use mpip_f08_support
+  implicit none
+  type(MPI_Comm) :: comm,newcomm
+  integer :: color,key
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Comm_split"//c_null_char)
+  call PMPI_Comm_split(comm,color,key,newcomm,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_file_read_at_all(fh,offset,buf,count,datatype,status,ierror)
+  use mpip_f08_support
+  implicit none
+  type(MPI_File) :: fh
+  integer(kind=MPI_OFFSET_KIND) :: offset
+  type(*), dimension(@BUFFER@), asynchronous :: buf
+  integer :: count
+  type(MPI_Datatype) :: datatype
+  type(MPI_Status) :: status
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=payload(datatype,count)
+  rma=0.0_c_double
+  token=f08_begin("MPI_File_read_at_all"//c_null_char)
+  call PMPI_File_read_at_all(fh,offset,buf,count,datatype,status,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_file_write_at_all(fh,offset,buf,count,datatype,status,ierror)
+  use mpip_f08_support
+  implicit none
+  type(MPI_File) :: fh
+  integer(kind=MPI_OFFSET_KIND) :: offset
+  type(*), dimension(@BUFFER@), asynchronous :: buf
+  integer :: count
+  type(MPI_Datatype) :: datatype
+  type(MPI_Status) :: status
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=payload(datatype,count)
+  rma=0.0_c_double
+  token=f08_begin("MPI_File_write_at_all"//c_null_char)
+  call PMPI_File_write_at_all(fh,offset,buf,count,datatype,status,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_file_read_at(fh,offset,buf,count,datatype,status,ierror)
+  use mpip_f08_support
+  implicit none
+  type(MPI_File) :: fh
+  integer(kind=MPI_OFFSET_KIND) :: offset
+  type(*), dimension(@BUFFER@), asynchronous :: buf
+  integer :: count
+  type(MPI_Datatype) :: datatype
+  type(MPI_Status) :: status
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=payload(datatype,count)
+  rma=0.0_c_double
+  token=f08_begin("MPI_File_read_at"//c_null_char)
+  call PMPI_File_read_at(fh,offset,buf,count,datatype,status,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_file_write_at(fh,offset,buf,count,datatype,status,ierror)
+  use mpip_f08_support
+  implicit none
+  type(MPI_File) :: fh
+  integer(kind=MPI_OFFSET_KIND) :: offset
+  type(*), dimension(@BUFFER@), asynchronous :: buf
+  integer :: count
+  type(MPI_Datatype) :: datatype
+  type(MPI_Status) :: status
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=payload(datatype,count)
+  rma=0.0_c_double
+  token=f08_begin("MPI_File_write_at"//c_null_char)
+  call PMPI_File_write_at(fh,offset,buf,count,datatype,status,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_file_open(comm,filename,amode,info,fh,ierror)
+  use mpip_f08_support
+  implicit none
+  type(MPI_Comm) :: comm
+  character(len=*) :: filename
+  integer :: amode
+  type(MPI_Info) :: info
+  type(MPI_File) :: fh
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_File_open"//c_null_char)
+  call PMPI_File_open(comm,filename,amode,info,fh,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_file_close(fh,ierror)
+  use mpip_f08_support
+  implicit none
+  type(MPI_File) :: fh
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_File_close"//c_null_char)
+  call PMPI_File_close(fh,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_file_sync(fh,ierror)
+  use mpip_f08_support
+  implicit none
+  type(MPI_File) :: fh
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_File_sync"//c_null_char)
+  call PMPI_File_sync(fh,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_file_set_size(fh,size,ierror)
+  use mpip_f08_support
+  implicit none
+  type(MPI_File) :: fh
+  integer(kind=MPI_OFFSET_KIND) :: size
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_File_set_size"//c_null_char)
+  call PMPI_File_set_size(fh,size,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_win_create(base,size,disp_unit,info,comm,win,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: base
+  integer(kind=MPI_ADDRESS_KIND) :: size
+  integer :: disp_unit
+  type(MPI_Info) :: info
+  type(MPI_Comm) :: comm
+  type(MPI_Win) :: win
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Win_create"//c_null_char)
+  call PMPI_Win_create(base,size,disp_unit,info,comm,win,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_win_fence(assert,win,ierror)
+  use mpip_f08_support
+  implicit none
+  integer :: assert
+  type(MPI_Win) :: win
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Win_fence"//c_null_char)
+  call PMPI_Win_fence(assert,win,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_win_free(win,ierror)
+  use mpip_f08_support
+  implicit none
+  type(MPI_Win) :: win
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=0.0_c_double
+  token=f08_begin("MPI_Win_free"//c_null_char)
+  call PMPI_Win_free(win,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine
+
+recursive subroutine mpip_f08_put(origin_addr,origin_count,origin_datatype,target_rank,target_disp, &
+    & target_count,target_datatype,win,ierror)
+  use mpip_f08_support
+  implicit none
+  type(*), dimension(@BUFFER@), asynchronous :: origin_addr
+  integer :: origin_count,target_rank,target_count
+  integer(kind=MPI_ADDRESS_KIND) :: target_disp
+  type(MPI_Datatype) :: origin_datatype,target_datatype
+  type(MPI_Win) :: win
+  integer, optional :: ierror
+  integer :: err
+  type(c_ptr) :: token
+  real(c_double) :: mess,io,rma
+  mess=0.0_c_double
+  io=0.0_c_double
+  rma=payload(target_datatype,target_count)
+  token=f08_begin("MPI_Put"//c_null_char)
+  call PMPI_Put(origin_addr,origin_count,origin_datatype,target_rank,target_disp,target_count, &
+    & target_datatype,win,err)
+  call f08_end(token,mess,io,rma)
+  if (present(ierror)) ierror=err
+end subroutine

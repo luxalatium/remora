@@ -73,3 +73,38 @@ GPU-aware MPI and numerical overhead qualification remain separate matrix rows.
 Research evidence stays per-system and immutable. Create/hash archives on compute,
 then retrieve through the owned checked-fetch entry. No test implicitly grants a
 new allocation, budget, publication or source/pin change.
+
+## Native F08 and timeout diagnostics
+
+When native adapters are built, preload uses `libmpiP.so`; F08 static tests use
+`libmpiP-f08.a` with the matching MPI Fortran linker. C/legacy static tests retain
+`libmpiP.a`. Test normal and optional-ierror Init/Init_thread/Finalize separately
+with `mpi-f08-lifecycle.F90`. MPI_Init may legitimately provide THREAD_SINGLE;
+its control contract differs from the FUNNELED Init_thread cases above.
+
+For NVHPC24.7's rejected scalar sentinel overload, the fixture flag
+`-DREMORA_F08_INPLACE_ARRAY_ALIAS` aliases the actual MPI_IN_PLACE address through
+C_LOC/C_F_POINTER as a rank-one pointer. Do not construct an array containing a
+copy of the sentinel value. Preserve the original compiler rejection separately;
+the workaround does not repair the site's MPI module.
+
+The case runner retains its 25-second timeout. At 20 seconds it records only
+matching rank PID/start/node/UID identities from that case's WORKER lines,
+including Linux process state and wchan/status. It never enumerates or signals
+unrelated processes. The caller remains responsible for exact-worker cleanup.
+An intentional sleep timeout validates this diagnostic path; it is not a
+reproduction or root-cause proof of an earlier Horizon shutdown failure.
+
+For static finalize diagnosis, compile `fixtures/mpi-finalize-trace.c` and link
+its object with `-Wl,--wrap=MPI_Finalize,--wrap=PMPI_Finalize`. The stderr markers
+separate entry/return from mpiP's finalize wrapper and its PMPI finalize call.
+Calls internal to a vendor shared object are not redirected by those static
+link flags, so an unprofiled control can have only the outer MPI markers.
+Absence of the inner markers in that control is not itself a failure.
+
+For a site native F08 Pcontrol failure, the explicit fixture option
+`-DREMORA_PCONTROL_C_REFERENCE` with `mpi-pcontrol-reference.c` routes only
+Pcontrol through the MPI C binding in the unprofiled reference. Keep profiler
+preload/static cases on the original F08 binding. Label this comparison with
+its binding variance; it does not turn the original native baseline into PASS
+or establish that the vendor F08 entry is repaired.

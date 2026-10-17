@@ -178,6 +178,13 @@ extract_archive "$ROOT/$archive" "$WORK/source" || fatal "$LAST_ERROR"
 SOURCE=$EXTRACTED
 mkdir -- "$STAGE" || fatal 'cannot create dependency stage'
 recipe_build || fatal "$LAST_ERROR"
+if [[ -n $REQUEST ]] && jq -e 'has("expected_result")' "$REQUEST" > /dev/null; then
+    jq -e --slurpfile actual "$RESULT_FILE" '
+        .expected_result as $expected | $actual[0] |
+        (.optional_artifacts // [])==($expected.optional_artifacts // []) and
+        (.fortran_f08 // null)==($expected.fortran_f08 // null)
+    ' "$REQUEST" > /dev/null || fatal 'dependency optional capabilities changed; configure again'
+fi
 while IFS= read -r path; do
     [[ -f $STAGE/$path && ! -L $STAGE/$path && -s $STAGE/$path ]] || fatal "dependency artifact missing/empty: $path"
     case $path in *.a) ;; *)
@@ -185,8 +192,11 @@ while IFS= read -r path; do
         run "$WORK" "$WORK/logs" "artifact-$PACKAGE" 60 "$(tool_path readelf)" -h -d "$STAGE/$path" || fatal "$LAST_ERROR"
         ;;
     esac
-done < <(jq -r --arg k "$PACKAGE" '.packages[$k].artifacts[]' "$REGISTRY")
+done < <(jq -r --arg k "$PACKAGE" --slurpfile result "$RESULT_FILE" \
+    '(.packages[$k].artifacts + ($result[0].optional_artifacts // [])) | unique[]' "$REGISTRY")
 find "$STAGE" -type f -print0 | record_files "$STAGE" "$WORK/artifacts.json" || fatal 'cannot record dependency artifacts'
-json_update "$RESULT_FILE" --slurpfile artifacts "$WORK/artifacts.json" '.status="BUILT" | .artifacts=$artifacts[0]' || fatal 'cannot save dependency result'
+json_update "$RESULT_FILE" --slurpfile artifacts "$WORK/artifacts.json" '.artifacts=$artifacts[0]' || fatal 'cannot save dependency artifacts'
+dependency_artifact_contract "$RESULT_FILE" "$REGISTRY" "$PACKAGE" || fatal 'dependency artifact contract mismatch'
+json_update "$RESULT_FILE" '.status="BUILT"' || fatal 'cannot save dependency result'
 progress "$PACKAGE ready; receipt: $RESULT_FILE"
 RESULT_FILE=''

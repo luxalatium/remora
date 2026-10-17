@@ -25,6 +25,15 @@ qualification remains NOT_RUN. Exit0 requires a BUILT receipt and all expected
 native artifacts; exit2 is failure, exit130 interruption. Logs and incomplete work
 are retained. JSON failure cannot be success. No global process cleanup is used.
 
+Optional artifact contract: a registry entry may declare `optional_artifacts`.
+A result's `optional_artifacts` selects a unique subset of those paths. Its
+`artifacts` keys must equal the required registry paths plus that selected
+subset; undeclared extras and missing required/selected files are errors.
+Absent optional lists mean empty lists, preserving earlier results. Configure
+and build must agree on the selection and on the additive `fortran_f08`
+capability record. Capability changes require reconfiguration. Both producer
+and consumer verify this contract; hashes still cover every deployed file.
+
 REMORA invokes the dependency installer only for an enabled third-party module.
 It verifies the returned artifact contract/checksums and copies just those files
 into its own stage. Required modules map failures to BLOCKED, auto to SKIPPED, off
@@ -52,7 +61,8 @@ bash third_party_packages/install.sh build --package mpip --config config.json -
 ```
 
 These commands stage only the dependency's `bin/mpstat` or `lib/libmpiP.a` and
-`lib/libmpiP.so`. The main REMORA installer remains the sole publisher of the
+`lib/libmpiP.so`, plus the declared optional `lib/libmpiP-f08.a` when native F08
+adapters are built. The main REMORA installer remains the sole publisher of the
 final package prefix. The child may be used without loading REMORA's CLI.
 Package recipes and tool requirements are declared in `packages.json` and
 `packages/*.sh`; adding or upgrading a dependency does not add its flags or
@@ -91,3 +101,10 @@ The exact single expected upstream probe must be present; unexpected source
 layout fails closed. This avoids implicit-int/function-declaration errors in
 modern C compilers without weakening user compiler flags or disabling Fortran.
 The retained release archive, generated library API and receipt schema are unchanged.
+
+Native F08 compatibility is maintained in `compatibility/mpiP-f08/` and the
+Bash `packages/mpip-f08.sh` recipe. The original C/legacy archive is retained;
+the F08 static archive requires the matching MPI Fortran linker. The combined
+shared library supplies qualified F08 preload entries. `fortran_f08.status`
+distinguishes `BUILT` from `UNAVAILABLE`; runtime remains `NOT_RUN` during
+installation. See that directory's README for exact coverage and ABI limits.

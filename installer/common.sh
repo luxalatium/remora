@@ -160,13 +160,12 @@ third_party_build() {
     }
     if [[ $PHASE == build ]]; then
         jq -e --arg name "$name" --slurpfile actual "$result" \
-            '.third_party_packages[$name] as $expected | $actual[0] | .archive==$expected.archive and .tools==$expected.tools and .requested_flags==$expected.requested_flags and .effective_flags==$expected.effective_flags' "$PLAN" > /dev/null || {
+            '.third_party_packages[$name] as $expected | $actual[0] | .archive==$expected.archive and .tools==$expected.tools and .requested_flags==$expected.requested_flags and .effective_flags==$expected.effective_flags and (.optional_artifacts // [])==($expected.optional_artifacts // []) and (.fortran_f08 // null)==($expected.fortran_f08 // null)' "$PLAN" > /dev/null || {
             error 'dependency inputs or flag capabilities changed; configure again'
             return 1
         }
     fi
-    jq -e --arg package "$package" --slurpfile registry "$ROOT/third_party_packages/packages.json" \
-        '(.artifacts|keys|sort)==($registry[0].packages[$package].artifacts|sort)' "$result" > /dev/null || {
+    dependency_artifact_contract "$result" "$ROOT/third_party_packages/packages.json" "$package" || {
         error 'dependency artifact contract mismatch'
         return 1
     }

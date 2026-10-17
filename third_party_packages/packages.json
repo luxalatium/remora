@@ -32,6 +32,9 @@
         "lib/libmpiP.a",
         "lib/libmpiP.so"
       ],
+      "optional_artifacts": [
+        "lib/libmpiP-f08.a"
+      ],
       "sha256": "e366843d53fa016fb03903e51c8aac901aa5155edabe64698a8d6fa618a03bbd"
     }
   }

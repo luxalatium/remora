@@ -1,5 +1,8 @@
+#ifdef REMORA_PCONTROL_C_REFERENCE
+#define MPI_Pcontrol remora_pcontrol_reference
+#endif
 program mpi_comprehensive
-  use, intrinsic :: iso_c_binding, only: c_int
+  use, intrinsic :: iso_c_binding, only: c_int, c_loc, c_f_pointer
 #ifdef USE_F08
   use mpi_f08
 #else
@@ -7,11 +10,14 @@ program mpi_comprehensive
 #endif
   implicit none
   integer, parameter :: loops=4, max_ranks=64
-  integer :: rank_id, ranks, errors=0, global_errors, provided, ierr, version, minor
+  integer :: rank_id, ranks, errors(1)=0, global_errors(1), provided, ierr, version, minor
   integer :: integer_bytes, host_length, i, k, next, prev, peer, subrank, subsize, error_class, error_code
-  integer, target, asynchronous :: exposed
-  integer, asynchronous :: sendbuf(64), recvbuf(64), value, total, outgoing
-  integer :: gathered(max_ranks), exchanged(max_ranks)
+  integer, target, asynchronous :: exposed(1)
+  integer, asynchronous :: sendbuf(64), recvbuf(64), value(1), total(1), outgoing(1)
+  integer :: gathered(max_ranks), exchanged(max_ranks), gather_rank(1)
+#ifdef REMORA_F08_INPLACE_ARRAY_ALIAS
+  integer, pointer :: remora_in_place(:)
+#endif
   integer(kind=MPI_OFFSET_KIND) :: offset
   integer(kind=MPI_ADDRESS_KIND) :: window_bytes, displacement
   real(kind=8) :: started
@@ -28,6 +34,12 @@ program mpi_comprehensive
   integer :: sub, stride, requests(2), request, file, window
 #endif
   interface
+#ifdef REMORA_PCONTROL_C_REFERENCE
+    subroutine remora_pcontrol_reference(level) bind(C,name="remora_pcontrol_reference")
+      import c_int
+      integer(c_int) :: level
+    end subroutine
+#endif
     subroutine remora_rank_identity(rank, size) bind(C, name="remora_rank_identity")
       import c_int
       integer(c_int), value :: rank, size
@@ -38,6 +50,11 @@ program mpi_comprehensive
   if (command_argument_count() > 0) call get_command_argument(1,test)
   call MPI_Init_thread(MPI_THREAD_FUNNELED, provided, ierr)
   call ok(ierr)
+#ifdef REMORA_F08_INPLACE_ARRAY_ALIAS
+  ! NVHPC24.7's module rejects the scalar sentinel overload. Alias the actual
+  ! sentinel address as rank one; copying its integer value is not equivalent.
+  call c_f_pointer(c_loc(MPI_IN_PLACE),remora_in_place,[1])
+#endif
   call MPI_Comm_rank(MPI_COMM_WORLD, rank_id, ierr)
   call MPI_Comm_size(MPI_COMM_WORLD, ranks, ierr)
   if (ranks > max_ranks) call MPI_Abort(MPI_COMM_WORLD,91,ierr)
@@ -106,17 +123,22 @@ program mpi_comprehensive
       if (rank_id==0) value=100+k
       call MPI_Bcast(value,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       call ok(ierr)
-      call check(value==100+k)
+      call check(all(value==100+k))
       value=rank_id+1
       total=value
       if (mod(k,2)==0) then
+#ifdef REMORA_F08_INPLACE_ARRAY_ALIAS
+        call MPI_Allreduce(remora_in_place,total,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
+#else
         call MPI_Allreduce(MPI_IN_PLACE,total,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
+#endif
       else
         call MPI_Allreduce(value,total,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
       end if
       call ok(ierr)
-      call check(total==ranks*(ranks+1)/2)
-      call MPI_Allgather(rank_id,1,MPI_INTEGER,gathered,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+      call check(all(total==ranks*(ranks+1)/2))
+      gather_rank(1)=rank_id
+      call MPI_Allgather(gather_rank,1,MPI_INTEGER,gathered,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
       call ok(ierr)
       do i=1,ranks
         call check(gathered(i)==i-1)
@@ -131,7 +153,7 @@ program mpi_comprehensive
       call ok(ierr)
       call MPI_Wait(request,MPI_STATUS_IGNORE,ierr)
       call ok(ierr)
-      call check(total==ranks*(ranks+1)/2)
+      call check(all(total==ranks*(ranks+1)/2))
     end do
     call MPI_Comm_split(MPI_COMM_WORLD,mod(rank_id,2),rank_id,sub,ierr)
     call ok(ierr)
@@ -141,7 +163,7 @@ program mpi_comprehensive
       value=subrank+1
       call MPI_Allreduce(value,total,1,MPI_INTEGER,MPI_SUM,sub,ierr)
       call ok(ierr)
-      call check(total==subsize*(subsize+1)/2)
+      call check(all(total==subsize*(subsize+1)/2))
     end do
     call MPI_Comm_free(sub,ierr)
     call ok(ierr)
@@ -204,7 +226,7 @@ program mpi_comprehensive
       call ok(ierr)
       call MPI_Win_fence(0,window,ierr)
       call ok(ierr)
-      call check(exposed==prev+1000*k)
+      call check(all(exposed==prev+1000*k))
     end do
     call MPI_Win_free(window,ierr)
     call ok(ierr)
@@ -230,7 +252,7 @@ program mpi_comprehensive
     do k=1,loops
       call MPI_Sendrecv(value,1,MPI_INTEGER,next,91,total,1,MPI_INTEGER,prev,91,MPI_COMM_WORLD,MPI_STATUS_IGNORE,ierr)
       call ok(ierr)
-      call check(total==prev)
+      call check(all(total==prev))
     end do
     call MPI_Pcontrol(3)
     call MPI_Pcontrol(0)
@@ -259,7 +281,7 @@ program mpi_comprehensive
     flush(6)
   end if
   call MPI_Finalize(ierr)
-  if (global_errors/=0) stop 1
+  if (any(global_errors/=0)) stop 1
 contains
   subroutine check(condition)
     logical, intent(in) :: condition

@@ -91,4 +91,6 @@ recipe_build() {
     run "$SOURCE" "$WORK/logs" mpip-make 240 "${build_env[@]}" "$(tool_path make)" -j1 "PYTHON=$python" "CFLAGS=$cflags" "FFLAGS=$fflags" "LDFLAGS=$ldflags" libmpiP.a || return 1
     run "$SOURCE" "$WORK/logs" mpip-shared 240 "${build_env[@]}" "$(tool_path make)" -j1 "PYTHON=$python" "CFLAGS=$cflags" "FFLAGS=$fflags" "LDFLAGS=$ldflags" shared || return 1
     mkdir -p -- "$STAGE/lib" && cp -p -- "$SOURCE/libmpiP.a" "$SOURCE/libmpiP.so" "$STAGE/lib/"
+    source "$ROOT/third_party_packages/packages/mpip-f08.sh" || return 1
+    mpi_f08_build
 }

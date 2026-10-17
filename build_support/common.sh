@@ -55,6 +55,24 @@ json_equal() {
     [[ $(jq -cS . "$1") == "$(jq -cS . "$2")" ]]
 }
 
+# Required artifacts plus a declared optional subset; unknown files fail closed.
+dependency_artifact_contract() {
+    local receipt=$1 registry=$2 package=$3
+    jq -e --arg package "$package" --slurpfile registry "$registry" '
+        $registry[0].packages[$package] as $spec |
+        (.optional_artifacts // []) as $selected |
+        ($spec.optional_artifacts // []) as $allowed |
+        ($spec | type)=="object" and
+        ($spec.artifacts | type)=="array" and
+        ($selected | type)=="array" and
+        ($selected | all(type=="string")) and
+        ($selected | length)==($selected | unique | length) and
+        (($selected - $allowed) | length)==0 and
+        (.artifacts | type)=="object" and
+        (.artifacts | keys | sort)==(($spec.artifacts + $selected) | sort)
+    ' "$receipt" > /dev/null
+}
+
 absolute() {
     local path=$1 part old_ifs=$IFS result='' parent suffix parts=() stack=()
     [[ $path != *$'\n'* && $path != *$'\r'* ]] || return 1
