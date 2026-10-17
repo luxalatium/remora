@@ -58,6 +58,13 @@ interpretation. A change yields PARTIAL/errno ESTALE with returned raw data.
 Sequential ioctl requests are not an atomic view and cannot exclude an ABA
 change. Unsupported/failed responses are null, never invented zero arrays.
 
+Full driver tables can be much larger than the interpreted allowlist. Each
+frame retains both name arrays and all returned values, so raw output size grows
+with interfaces and total driver stat count, even for a module with few selected
+fields. Measure actual frame bytes and select interfaces/sample interval
+accordingly. Lossless schema caching/compression is not implemented; no low-I/O
+or monitoring-overhead claim is made.
+
 Limits are16interfaces,16384driver stats/interface,32768interpreted records,
 64MiB/frame. Exceeding discovery/stat/record limits marks PARTIAL with a reason;
 interfaces beyond the limit are not reported as complete coverage. A frame too

@@ -53,7 +53,9 @@ injects EINVAL/EACCES or pauses a read for SIGTERM; production has no fault hook
 `test_network_environment.py` additionally exercises real folder initialization
 and a clean worker shell, unset versus empty selectors, and literal serialization
 of malformed values without command evaluation. Run both network files with
-`python3 -B -m unittest discover -s tests -p 'test_network*.py'` (42 cases).
+`python3 -B -m unittest discover -s tests -p 'test_network*.py'`. The glob also
+includes optional snapshot/proc/NIC resource tests described below; qualification
+counts are recorded against the tested source revision.
 Set `REMORA_NETWORK_TEST_CC` to a compiler command when needed (separate from
 the installer's CC). Preserve compiler failures; missing compiler is not PASS.
 
@@ -114,3 +116,28 @@ Bash/C netprotocol and softnet modules. On allocated Linux compute,
 repetitions per Bash/native path, independent before/after proc sources,
 units/CPU/header mapping checks and raw finalization hashes. Development Python
 is not installed in the collection runtime.
+
+### NIC/link-health standard cases
+
+`test_network_nic.py` adds40 deterministic Bash/C fixture cases at collector
+revision fb3f89f. The fixture backend is compiled only with `REMORA_NIC_TEST`;
+installed collectors have no fixture input, fault hooks or Python dependency.
+The full network suite at this revision has163 cases.
+
+| Acceptance group | Required checks |
+| --- | --- |
+| Interface/driver selection | sorted Ethernet/IPoIB and DOWN; default lo exclusion; exact comma selectors; duplicate/invalid/absent selection; unknown/plain IPoIB driver explicit unsupported |
+| Units/scope | all five driver families; queue/priority/CoS bounded indices; uint64 strings; frames versus microseconds/bits/blocks/bytes/events/native_count; IPoIB Ethernet interpretations unsupported even when raw zero |
+| Raw/schema | full32-byte padded names plus ordered values; name reordering; duplicate names; schema/identity change rejection with raw retention; absent versus zero; reset remains absolute snapshot |
+| Failure/limits | denied/unsupported/malformed/overflow; interface/stat caps; lock; nofollow FIFO/symlink/hardlink; pending/incomplete files; SIGTERM preserves pending and only owned child cleanup |
+| Bash/runtime | init discovery does not truncate or promise readability; six hooks preserve raw; native/Bash fixture parity; actual runtime worker JSONL validation |
+| Allocated Linux | strict GCC clean install with only selected modules; entire standard suite; three native and three Bash repetitions per module independently bracketed by ethtool-S/i; source index/name/value and semantic scope checks; installed prefix has no.py |
+
+Run `python3 -B tests/network_nic_live.py --prefix PREFIX --output NEW_DIR`
+on an authorized allocated compute node. The ethtool CLI and Python are
+independent development oracles, not collection runtime dependencies. Retain
+all before/after stdout/stderr, command statuses, raw API snapshots, revisions
+and binary hashes. Record SKIP reasons per field/interface; one readable
+interface does not establish support for every interface or every feature.
+Hardlink fixture creation denial is a filesystem SKIP; never weaken the guard.
+Formal overhead, full legacy wrapper and multinode qualification remain separate.
