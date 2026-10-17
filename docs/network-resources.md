@@ -6,6 +6,8 @@ independently selectable and default to **off**; existing eth/ib/opa files and
 plots are unchanged. Enable desired modules with the installer, for example
 `--module netinfo=on --module neterrors=on --module ibcounters=on`.
 Select installed modules at run time through `REMORA_MODULES` as usual.
+See the [complete field/unit/scope reference](network-resource-fields.md) when
+choosing modules. Field availability must still be checked on the target node.
 
 | Module | Scope and collected information |
 | --- | --- |
