@@ -59,7 +59,7 @@ static const struct nx_field nx_mlx[]={
 /* Only known cumulative fields; gauges/high-water/per-VL unknowns are excluded. */
 static const struct nx_field nx_opa[]={
  {"TxPkt","packets",1},{"RxPkt","packets",1},{"TxWords","DWORD",4},{"RxWords","DWORD",4},
- {"TxWait","native_ticks",1},{"DmaWait","native_ticks",1},
+ {"TxWait","native_ticks",1},{"DmaWait","native_count",1},
  {"RcvCstrErr","native_count",1},{"XmitCstrErr","native_count",1},
  {"UnknownFrame","native_count",1},{"PktDrop","native_count",1},
  {"Unaligned","native_count",1},{"SeqNak","native_count",1},

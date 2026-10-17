@@ -64,8 +64,11 @@ Treat resets, wraps and saturated values as gaps when deriving differences.
 
 Netdev and IB errors use packets/events; mlx/hfi driver error semantics use
 `native_count` unless a packet/request meaning is established by the field.
-OPA TxWords/RxWords use DWORD (byte_scale=4). TxWait, DmaWait and port_xmit_wait
-remain **native_ticks**, with no inferred duration/congestion percentage.
+OPA TxWords/RxWords use DWORD (byte_scale=4). TxWait and port_xmit_wait remain **native_ticks**, with no inferred
+duration/congestion percentage. DmaWait is a software counter exposed through
+the driver ibport n_dmawait field and retains **native_count**, not a clock unit.
+Earlier development snapshots labelled DmaWait native_ticks; preserve their raw
+values and interpret that label using the producer revision and this correction.
 Other byte_scale values are 0 (not applicable), not an implicit byte conversion.
 IB extended counters are tried before classic counters; every failed attempt
 is retained. Only absent/unsupported errno permits fallback; denial/parse/I/O

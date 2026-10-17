@@ -110,8 +110,8 @@ class NetworkResources(unittest.TestCase):
         b=self.fabric();self.put(b+'/counters/port_xmit_wait',19);self.put(b+'/counters_ext/symbol_error_64',13)
         x=self.runmod('ibcounters');self.assertEqual(len(self.records(x,'symbol_error')),1);r=self.records(x,'port_xmit_wait');self.assertEqual([v['status'] for v in r],['ABSENT','OK']);self.assertEqual(r[1]['unit'],'native_ticks')
     def test_opa_dword_scale4_and_ticks(self):
-        b=self.fabric('hfi1_0',2);self.put(b+'/hw_counters/TxWords',37);self.put(b+'/hw_counters/TxWait',11)
-        x=self.runmod('opacounters');r=self.records(x,'TxWords')[0];self.assertEqual((r['value'],r['unit'],r['byte_scale']),('37','DWORD',4));self.assertEqual(self.records(x,'TxWait')[0]['unit'],'native_ticks')
+        b=self.fabric('hfi1_0',2);self.put(b+'/hw_counters/TxWords',37);self.put(b+'/hw_counters/TxWait',11);self.put(b+'/hw_counters/DmaWait',41)
+        x=self.runmod('opacounters');r=self.records(x,'TxWords')[0];self.assertEqual((r['value'],r['unit'],r['byte_scale']),('37','DWORD',4));self.assertEqual(self.records(x,'TxWait')[0]['unit'],'native_ticks');self.assertEqual(self.records(x,'DmaWait')[0]['unit'],'native_count');self.assertEqual(self.records(x,'DmaWait')[0]['value'],'41')
     def test_no_unknown_gauges_interpreted(self):
         b=self.fabric('hfi1_0');self.put(b+'/hw_counters/TxPkt',7);self.put(b+'/hw_counters/UnknownHighWater',999)
         self.assertFalse(self.records(self.runmod('opacounters'),'UnknownHighWater'))
