@@ -96,3 +96,14 @@ owned worker processes and temporary state. Production rejects fixture-root
 options and has no Python resource runtime. The installer suite uses synthetic
 ELF artifacts and does not execute them. These checks do not claim HPC runtime,
 filesystem accuracy, full legacy-daemon cleanup or monitoring overhead acceptance.
+
+Optional network-resource standard: `test_network_resources.py` extends the
+legacy network suite with snapshots, field availability, unsigned values,
+family/port2/discovery/selection, raw preservation, locks, malformed/oversized
+sources, FIFO/symlink/hardlink output and interruption cases.
+`network_resources_live.py` independently enumerates expected entities and
+source attributes, brackets all readable counters and stable metadata across
+three repetitions of each native/Bash module path, verifies exact explicit
+selection and finalizer preservation. Run only on allocated compute; preserve
+raw JSONL plus before/after readings, commands, return codes and checksums.
+See `docs/network-resources.md`. Unsupported families remain SKIP.

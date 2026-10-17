@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Optional user-space network resource; native C, no Python runtime.
+# See docs/network-resources.md. Preserve all JSONL snapshots.
+init_module_ibcounters() { "$REMORA_BIN/binary_data_collectors/data_collect_ibcounters" "$1" "$2" "$3" --check; }
+collect_data_ibcounters() { "$REMORA_BIN/binary_data_collectors/data_collect_ibcounters" "$1" "$2" "$3"; }
+process_data_ibcounters() { :; }
+plot_data_ibcounters() { :; }
+monitor_data_ibcounters() { :; }
+finalize_module_ibcounters() { :; }

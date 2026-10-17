@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Optional user-space network resource; native C, no Python runtime.
+# See docs/network-resources.md. Preserve all JSONL snapshots.
+init_module_neterrors() { "$REMORA_BIN/binary_data_collectors/data_collect_neterrors" "$1" "$2" "$3" --check; }
+collect_data_neterrors() { "$REMORA_BIN/binary_data_collectors/data_collect_neterrors" "$1" "$2" "$3"; }
+process_data_neterrors() { :; }
+plot_data_neterrors() { :; }
+monitor_data_neterrors() { :; }
+finalize_module_neterrors() { :; }

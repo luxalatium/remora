@@ -81,3 +81,38 @@ clean-all:
 	rm -rf $(OBJECTS) $(BINARIES)
 
 .PHONY : all  clean clean-all
+
+# Optional network-resource snapshots.
+OBJECTS += data_collect_netinfo.o data_collect_neterrors.o data_collect_ibcounters.o data_collect_mlxcounters.o data_collect_opacounters.o
+BINARIES += data_collect_netinfo data_collect_neterrors data_collect_ibcounters data_collect_mlxcounters data_collect_opacounters
+all: data_collect_netinfo data_collect_neterrors data_collect_ibcounters data_collect_mlxcounters data_collect_opacounters
+
+data_collect_netinfo: data_collect_netinfo.o
+	$(shell mkdir -p $(BUILD_DIR))
+	@$(CC) $< -o $(BUILD_DIR)/$@
+
+data_collect_netinfo.o: remora_netresources.h
+
+data_collect_neterrors: data_collect_neterrors.o
+	$(shell mkdir -p $(BUILD_DIR))
+	@$(CC) $< -o $(BUILD_DIR)/$@
+
+data_collect_neterrors.o: remora_netresources.h
+
+data_collect_ibcounters: data_collect_ibcounters.o
+	$(shell mkdir -p $(BUILD_DIR))
+	@$(CC) $< -o $(BUILD_DIR)/$@
+
+data_collect_ibcounters.o: remora_netresources.h
+
+data_collect_mlxcounters: data_collect_mlxcounters.o
+	$(shell mkdir -p $(BUILD_DIR))
+	@$(CC) $< -o $(BUILD_DIR)/$@
+
+data_collect_mlxcounters.o: remora_netresources.h
+
+data_collect_opacounters: data_collect_opacounters.o
+	$(shell mkdir -p $(BUILD_DIR))
+	@$(CC) $< -o $(BUILD_DIR)/$@
+
+data_collect_opacounters.o: remora_netresources.h

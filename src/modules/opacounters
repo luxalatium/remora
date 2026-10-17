@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Optional user-space network resource; native C, no Python runtime.
+# See docs/network-resources.md. Preserve all JSONL snapshots.
+init_module_opacounters() { "$REMORA_BIN/binary_data_collectors/data_collect_opacounters" "$1" "$2" "$3" --check; }
+collect_data_opacounters() { "$REMORA_BIN/binary_data_collectors/data_collect_opacounters" "$1" "$2" "$3"; }
+process_data_opacounters() { :; }
+plot_data_opacounters() { :; }
+monitor_data_opacounters() { :; }
+finalize_module_opacounters() { :; }

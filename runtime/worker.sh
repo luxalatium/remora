@@ -133,7 +133,7 @@ if [[ $IMPLEMENTATION == shell ]]; then
     init_rc=$?
     printf '%s\n' "$init_rc" > "$CASE/init.rc"
     if ((init_rc != 0)); then
-        if [[ $MODULE == eth || $MODULE == ib || $MODULE == opa ]] && ((init_rc == 69)); then
+        if [[ $MODULE == eth || $MODULE == ib || $MODULE == opa || $MODULE == netinfo || $MODULE == neterrors || $MODULE == ibcounters || $MODULE == mlxcounters || $MODULE == opacounters ]] && ((init_rc == 69)); then
             unsupported 'no eligible network interface/port or installed reader'
         fi
         result FAIL "module init failed (exit $init_rc); backend was prechecked"
@@ -145,7 +145,7 @@ else
     rc=$?
     printf '%s\n' "$rc" > "$CASE/warmup.rc"
     if ((rc != 0)); then
-        if [[ $MODULE == eth || $MODULE == ib || $MODULE == opa ]] && ((rc == 69)); then
+        if [[ $MODULE == eth || $MODULE == ib || $MODULE == opa || $MODULE == netinfo || $MODULE == neterrors || $MODULE == ibcounters || $MODULE == mlxcounters || $MODULE == opacounters ]] && ((rc == 69)); then
             unsupported 'no eligible network interface/port'
         fi
         result FAIL "collector warmup failed (exit $rc)"
@@ -170,6 +170,23 @@ for ((sample = 1; sample <= SAMPLES; sample++)); do
     if ((sample < SAMPLES)); then sleep "$INTERVAL"; fi
 done
 snapshot after
+
+case $MODULE in
+    netinfo | neterrors | ibcounters | mlxcounters | opacounters)
+        file="$RAW/${MODULE}_${NODE}.jsonl"
+        if [[ -s $file ]] && jq -e -s --arg module "$MODULE" --argjson samples "$SAMPLES" '
+            length >= $samples and all(.[];
+                .schema == "remora-network-resources/v1" and .module == $module and
+                .status == "OK" and .readable_primary > 0 and
+                (.records | length) == .record_count and
+                all(.records[]; has("raw") and has("source") and has("unit") and
+                    (if .status == "OK" then (.value | type) == "string"
+                     else .value == null and .errno != 0 end)))' "$file" > /dev/null; then
+            result PASS 'native snapshots preserve field scope, units, raw values and availability; independent source oracle qualification is separate' PASS OPEN
+        else result FAIL 'network resource snapshot schema/coverage invalid' FAIL FAIL; fi
+        exit 0
+        ;;
+esac
 
 width=0 cpu=0
 case $MODULE in

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Optional user-space network resource; native C, no Python runtime.
+# See docs/network-resources.md. Preserve all JSONL snapshots.
+init_module_mlxcounters() { "$REMORA_BIN/binary_data_collectors/data_collect_mlxcounters" "$1" "$2" "$3" --check; }
+collect_data_mlxcounters() { "$REMORA_BIN/binary_data_collectors/data_collect_mlxcounters" "$1" "$2" "$3"; }
+process_data_mlxcounters() { :; }
+plot_data_mlxcounters() { :; }
+monitor_data_mlxcounters() { :; }
+finalize_module_mlxcounters() { :; }

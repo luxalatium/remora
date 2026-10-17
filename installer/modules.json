@@ -103,13 +103,45 @@
       "kind": "collector",
       "requires": [],
       "entry": "io,IO",
-      "artifacts": ["bin/binary_data_collectors/data_collect_io"]
+      "artifacts": [
+        "bin/binary_data_collectors/data_collect_io"
+      ]
     },
     "dvs": {
       "default": "off",
       "kind": "shell",
       "requires": [],
       "entry": "dvs,IO"
+    },
+    "netinfo": {
+      "default": "off",
+      "kind": "collector",
+      "requires": [],
+      "entry": "netinfo,NETWORK"
+    },
+    "neterrors": {
+      "default": "off",
+      "kind": "collector",
+      "requires": [],
+      "entry": "neterrors,NETWORK"
+    },
+    "ibcounters": {
+      "default": "off",
+      "kind": "collector",
+      "requires": [],
+      "entry": "ibcounters,NETWORK"
+    },
+    "mlxcounters": {
+      "default": "off",
+      "kind": "collector",
+      "requires": [],
+      "entry": "mlxcounters,NETWORK"
+    },
+    "opacounters": {
+      "default": "off",
+      "kind": "collector",
+      "requires": [],
+      "entry": "opacounters,NETWORK"
     }
   }
 }
