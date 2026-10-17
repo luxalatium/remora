@@ -162,6 +162,11 @@ for ((sample = 1; sample <= SAMPLES; sample++)); do
     rc=$?
     printf '%s\n' "$rc" > "$CASE/sample-$sample.rc"
     if ((rc != 0)); then
+        case $MODULE in
+            netinfo | neterrors | ibcounters | mlxcounters | opacounters)
+                if ((rc == 69)); then unsupported 'no readable primary network resource fields; raw availability records retained'; fi
+                ;;
+        esac
         result FAIL "sample $sample failed (exit $rc)"
         exit 0
     fi

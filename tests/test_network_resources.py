@@ -186,6 +186,13 @@ class NetworkResources(unittest.TestCase):
         r=subprocess.run(['bash',str(ROOT/'runtime/worker.sh'),'opacounters','collector',str(self.prefix),str(case),'2','1',''],env=self.env,capture_output=True,text=True,timeout=10)
         self.assertEqual(r.returncode,0,r.stderr)
         self.assertEqual(json.loads((case/'result.json').read_text())['status'],'SKIP')
+        self.fabric('hfi1_0',2)  # Discovery succeeds, all primary counter reads unsupported/absent.
+        for mode in ('shell','collector'):
+            case=self.base/('worker-primary-skip-'+mode)
+            r=subprocess.run(['bash',str(ROOT/'runtime/worker.sh'),'ibcounters',mode,str(self.prefix),str(case),'2','1',''],env=self.env,capture_output=True,text=True,timeout=10)
+            self.assertEqual(r.returncode,0,r.stderr)
+            self.assertEqual(json.loads((case/'result.json').read_text())['status'],'SKIP')
+            self.assertTrue(list((case/'raw').glob('ibcounters_*.jsonl')))
     def test_no_runtime_python(self):
         registry=json.loads((ROOT/'installer/modules.json').read_text())['modules']
         for m in MODULES:
