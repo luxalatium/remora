@@ -50,6 +50,10 @@ The versioned contract is [network-modules.md](../docs/network-modules.md).
 `test_network.py` compiles the real eth/ib/opa collectors and uses deterministic
 sysfs fixtures with independent expected integer results. A test-only wrapper
 injects EINVAL/EACCES or pauses a read for SIGTERM; production has no fault hooks.
+`test_network_environment.py` additionally exercises real folder initialization
+and a clean worker shell, unset versus empty selectors, and literal serialization
+of malformed values without command evaluation. Run both network files with
+`python3 -B -m unittest discover -s tests -p 'test_network*.py'` (42 cases).
 Set `REMORA_NETWORK_TEST_CC` to a compiler command when needed (separate from
 the installer's CC). Preserve compiler failures; missing compiler is not PASS.
 

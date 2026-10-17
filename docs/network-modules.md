@@ -91,7 +91,8 @@ Normal users need no root, UMAD device, daemon, or sysfs writes.
 
 ## Standard qualification
 
-Run `python3 -B -m unittest discover -s tests -p test_network.py` locally and on
+Run all39collector fixture cases and3Bash environment-forwarding cases with
+`python3 -B -m unittest discover -s tests -p 'test_network*.py'` locally and on
 allocated Linux compute. Run `python3 tests/network_live.py --prefix PREFIX
 --output NEW_DIRECTORY` on an allocated node for source-aware bracketed oracles,
 explicit/default selections, native/module parity, unsupported handling and a
