@@ -174,9 +174,9 @@ snapshot after
 case $MODULE in
     netinfo | neterrors | ibcounters | mlxcounters | opacounters)
         file="$RAW/${MODULE}_${NODE}.jsonl"
-        if [[ -s $file ]] && jq -e -s --arg module "$MODULE" --argjson samples "$SAMPLES" '
+        if [[ -s $file ]] && jq -e -s --arg module_name "$MODULE" --argjson samples "$SAMPLES" '
             length >= $samples and all(.[];
-                .schema == "remora-network-resources/v1" and .module == $module and
+                .schema == "remora-network-resources/v1" and .module == $module_name and
                 .status == "OK" and .readable_primary > 0 and
                 (.records | length) == .record_count and
                 all(.records[]; has("raw") and has("source") and has("unit") and

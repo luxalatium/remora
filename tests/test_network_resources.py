@@ -172,6 +172,20 @@ class NetworkResources(unittest.TestCase):
         finally:
             if child.poll() is None:child.kill();child.wait()
         self.assertTrue((self.raw/'neterrors_n.jsonl.pending').exists());self.runmod(code=74)
+    def test_actual_runtime_worker_validates_snapshots(self):
+        if not shutil.which('jq'):self.skipTest('jq unavailable for Bash runtime validator')
+        for mode in ('shell','collector'):
+            case=self.base/('worker-'+mode)
+            r=subprocess.run(['bash',str(ROOT/'runtime/worker.sh'),'neterrors',mode,str(self.prefix),str(case),'2','1',''],env=self.env,capture_output=True,text=True,timeout=15)
+            self.assertEqual(r.returncode,0,r.stderr)
+            result=json.loads((case/'result.json').read_text())
+            self.assertEqual(result['status'],'PASS',result)
+    def test_actual_runtime_worker_preserves_unsupported(self):
+        if not shutil.which('jq'):self.skipTest('jq unavailable for Bash runtime validator')
+        case=self.base/'worker-skip'
+        r=subprocess.run(['bash',str(ROOT/'runtime/worker.sh'),'opacounters','collector',str(self.prefix),str(case),'2','1',''],env=self.env,capture_output=True,text=True,timeout=10)
+        self.assertEqual(r.returncode,0,r.stderr)
+        self.assertEqual(json.loads((case/'result.json').read_text())['status'],'SKIP')
     def test_no_runtime_python(self):
         registry=json.loads((ROOT/'installer/modules.json').read_text())['modules']
         for m in MODULES:
