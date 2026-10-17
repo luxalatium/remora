@@ -80,8 +80,10 @@ transport layout is assumed. Version 1 supports statvers 1.0 and 1.1.
 Diskstats accepts the 11, 15 and 17 counter layouts after major/minor/name.
 Sectors are **512-byte accounting units**, independent of physical sector size.
 `in_flight` is a gauge. Discard/flush fields absent in older layouts are null with
-`OPTIONAL_FIELD_ABSENT`. Node disk activity cannot be equated with application
-storage accounting. Tmpfs is memory-backed, and logical process I/O may include
+`OPTIONAL_FIELD_ABSENT`. A path whose filesystem device has neither a sysfs block entry nor a diskstats
+row is SKIP with `NO_LOCAL_BLOCK_MAPPING` (for example BeeGFS). An explicitly
+selected absent device remains MISSING; malformed/denied sources stay failures.
+Node disk activity cannot be equated with application storage accounting. Tmpfs is memory-backed, and logical process I/O may include
 pipes/terminals or cache hits; zero storage bytes can therefore be a valid sample.
 
 ## JSONL contract: `remora-resource-sample/v1`

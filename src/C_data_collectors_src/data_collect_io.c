@@ -337,7 +337,7 @@ static void block_sample(void) {
         }
         char path[128],full[MAX_PATH],generation[96]="";struct stat st;
         fmt(path,sizeof path,"/sys/dev/block/%s",e->dev);
-        int known=!rooted(path,full) && !stat(full,&st);fmt(path,sizeof path,"/sys/dev/block/%s/diskseq",e->dev);char *seq=text(path);uint64_t diskseq;
+        int known=!rooted(path,full) && !stat(full,&st);int identity_error=known?0:errno;fmt(path,sizeof path,"/sys/dev/block/%s/diskseq",e->dev);char *seq=text(path);uint64_t diskseq;
         if(seq) {trim(seq);if(!uint_value(seq,&diskseq)) fmt(generation,sizeof generation,"%" PRIu64,diskseq);free(seq);}
         e->identity_known=known && *generation && *boot;
         fmt(e->key,sizeof e->key,"%s|%s|%" PRIu64 ":%" PRIu64,e->dev,generation,known?(uint64_t)st.st_dev:0,known?(uint64_t)st.st_ino:0);
@@ -351,7 +351,12 @@ static void block_sample(void) {
             fmt(e->source,sizeof e->source,"%s",t[2]);
             static const char *names[]={"read_ios","read_merges","read_sectors_512","read_ms","write_ios","write_merges","write_sectors_512","write_ms","in_flight","io_ms","weighted_io_ms","discard_ios","discard_merges","discard_sectors_512","discard_ms","flush_ios","flush_ms"};
             for(unsigned j=0;j<17;j++) metric(e,names[j],j==2 || j==6 || j==13?"sectors_512_bytes":j==3 || j==7 || j==9 || j==10 || j==14 || j==16?"ms":"count",j==8,j<width-3?a[j]:0,j<width-3?NULL:"OPTIONAL_FIELD_ABSENT");
-        }free(copy);if(matches!=1) entity_fail(e,matches?"DUPLICATE_DEVICE":"DEVICE_ABSENT");
+        }free(copy);
+        if(matches!=1) {
+            if(!matches && !device_count && !known && identity_error==ENOENT && !strcmp(e->status,"PASS")) {
+                e->status="SKIP";e->reason="NO_LOCAL_BLOCK_MAPPING";
+            } else entity_fail(e,matches?"DUPLICATE_DEVICE":"DEVICE_ABSENT");
+        }
     }
     for(unsigned i=0;i<count;i++) for(unsigned j=0;j<count;j++) if(i!=j && *entities[i].dev && !strcmp(entities[i].dev,entities[j].dev)) entities[i].candidate=1;
 }

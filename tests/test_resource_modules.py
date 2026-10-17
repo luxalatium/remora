@@ -51,7 +51,13 @@ class Resources(unittest.TestCase):
 #include <stdlib.h>
 #include <string.h>
 static int test_statvfs(const char *path,struct statvfs *v) {
- const char *mode=getenv("IO_TEST_CAPACITY");if(!mode) return statvfs(path,v);
+ const char *mode=getenv("IO_TEST_CAPACITY");
+ if(!mode) {
+  int r=statvfs(path,v);if(r) return r;
+  /* Synthetic capacity must not inherit the fixture host's inode support. */
+  memset(v,0,sizeof *v);v->f_blocks=1000;v->f_frsize=4096;v->f_bfree=500;v->f_bavail=400;
+  v->f_files=100;v->f_ffree=90;v->f_favail=80;return 0;
+ }
  memset(v,0,sizeof *v);v->f_blocks=100;v->f_frsize=4096;
  if(!strcmp(mode,"overflow")) {v->f_blocks=(fsblkcnt_t)-1;v->f_frsize=(unsigned long)-1;v->f_bfree=1;v->f_bavail=1;}
  if(!strcmp(mode,"unsupported")) v->f_blocks=0;
@@ -372,6 +378,19 @@ static uid_t test_geteuid(void) {return geteuid()+(getenv("IO_TEST_OTHER_UID")?1
         self.assertEqual(len(row['entities']), 2)
         self.assertTrue(all(e['shared_domain_candidate'] for e in row['entities']))
         self.assertNotIn('total', row)
+
+    def test_virtual_filesystem_without_local_block_mapping_is_skip(self):
+        self.put('/proc/self/mountinfo', MOUNTS + '6 1 0:99 / /parallel rw - beegfs beegfs_nodev rw\n')
+        (self.fixture / 'parallel').mkdir()
+        row = self.call('block', '--path', '/parallel')
+        self.assertEqual(row['entities'][0]['status'], 'SKIP')
+        self.assertEqual(row['entities'][0]['reason'], 'NO_LOCAL_BLOCK_MAPPING')
+        self.assertEqual(row['entities'][0]['metrics'], {})
+
+    def test_explicit_absent_device_remains_missing(self):
+        row = self.call('block', '--device', '0:99', expect=2)
+        self.assertEqual(row['entities'][0]['status'], 'MISSING')
+        self.assertEqual(row['entities'][0]['reason'], 'DEVICE_ABSENT')
 
     def test_invalid_selection_not_silently_enabled(self):
         for args in [('nfs,unknown',), ('nfs,nfs',), ('nfs,',), ('nfs', '--pid', '4242'), ('block', '--device', '-1:2'), ('capacity', '--path', 'relative')]:
