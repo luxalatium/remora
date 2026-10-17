@@ -44,6 +44,7 @@ class Resources(unittest.TestCase):
         # Test-only capacity and UID doubles; no hooks in the installed collector.
         wrapper = Path(cls.build.name) / 'fixture.c'
         wrapper.write_text('''#define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE 1
 #define _DARWIN_C_SOURCE 1
 #include <sys/statvfs.h>
 #include <unistd.h>

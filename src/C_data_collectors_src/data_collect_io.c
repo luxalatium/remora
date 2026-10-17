@@ -215,7 +215,10 @@ static void paths_sample(int tmp) {
 }
 static int values(char **t,unsigned n,uint64_t *a,unsigned minimum,unsigned maximum) {
     if(n<minimum || n>maximum) return -1;
-    for(unsigned i=0;i<n;i++) if(uint_value(t[i],&a[i])) return -1;return 0;
+    for(unsigned i=0;i<n;i++) {
+        if(uint_value(t[i],&a[i])) return -1;
+    }
+    return 0;
 }
 static void nfs_sample(void) {
     char *source=read_raw("/proc/self/mountstats");if(!source) return;
@@ -315,7 +318,9 @@ static void process_sample(void) {
 }
 static int device_name(const char *dev) {
     char copy[64];if(fmt(copy,sizeof copy,"%s",dev)) return 0;char *colon=strchr(copy,':');uint64_t a,b;
-    if(!colon) return 0;*colon=0;return !uint_value(copy,&a) && !uint_value(colon+1,&b) && a<=UINT_MAX && b<=UINT_MAX;
+    if(!colon) return 0;
+    *colon=0;
+    return !uint_value(copy,&a) && !uint_value(colon+1,&b) && a<=UINT_MAX && b<=UINT_MAX;
 }
 static void block_sample(void) {
     char *source=read_raw("/proc/diskstats");if(!source) return;
@@ -393,7 +398,8 @@ static int store_state(void) {
 }
 
 static void invalidate_state(void) {
-    if(state_dir<0) return;char name[256];state_name(name);
+    if(state_dir<0) return;
+    char name[256];state_name(name);
     /* Only this locked node/provider state is invalidated; no wildcard cleanup. */
     int fd=owned_file(name,O_WRONLY);if(fd>=0) {ftruncate(fd,0);close(fd);}
 }
@@ -442,7 +448,8 @@ static void emit(FILE *f) {
             struct metric *m=&e->m[j];if(j) fputc(',',f);quoted(f,m->name);fputs(":{\"value\":",f);
             if(m->valid) fprintf(f,"%" PRIu64,m->value);else fputs("null",f);
             fputs(",\"status\":",f);quoted(f,m->valid?"PASS":"MISSING");fputs(",\"reason\":",f);quoted(f,m->reason);fputs(",\"unit\":",f);quoted(f,m->unit);fputs(",\"kind\":",f);quoted(f,m->gauge?"gauge":"counter");
-            if(!m->gauge) interval(f,e,m);fputc('}',f);
+            if(!m->gauge) interval(f,e,m);
+            fputc('}',f);
         }fputs("}}",f);
     }fputs("],\"raw\":[",f);
     for(unsigned i=0;i<raw_count;i++) {if(i) fputc(',',f);fputs("{\"path\":",f);quoted(f,raw_path[i]);fputs(",\"text\":",f);quoted(f,raw[i]);fputc('}',f);}fputs("]}\n",f);
@@ -478,7 +485,8 @@ static int worker(FILE *f) {
         }free(after);
     }
     end_ns=now(CLOCK_MONOTONIC);
-    if(!discovery && store_state()) fail("STATE_WRITE_ERROR");emit(f);
+    if(!discovery && store_state()) fail("STATE_WRITE_ERROR");
+    emit(f);
     return ferror(f)?74:!strcmp(status,"PASS") || !strcmp(status,"SKIP")?0:10;
 }
 static void on_signal(int sig) {interrupted=sig;}
@@ -526,16 +534,19 @@ static int isolated(FILE *out) {
         }
         cleanup_pending();
     }
-    if(code==74) invalidate_state();free(buffer);return code;
+    if(code==74) invalidate_state();
+    free(buffer);return code;
 }
 static int split_list(const char *s,const char *delimiter,const char **out,unsigned *n) {
-    if(!s || !*s || strlen(s)>32768) return -1;char *copy=strdup(s),*save=NULL;if(!copy) return -1;
+    if(!s || !*s || strlen(s)>32768) return -1;
+    char *copy=strdup(s),*save=NULL;if(!copy) return -1;
     for(char *p=strtok_r(copy,delimiter,&save);p;p=strtok_r(NULL,delimiter,&save)) {if(*n==64) return -1;out[(*n)++]=p;}return *n?0:-1;
 }
 static int usage(void) {fputs("usage: data_collect_io [NODE OUTDIR TMPDIR] | [--list|--describe|--discover|--check] [--modules CSV] [--path ABS] [--device MAJOR:MINOR] [--pid PID:START] [--node NAME] [--state-dir DIR] [--timeout-ms N] [--allow-partial]\n",stderr);return 64;}
 int main(int argc,char **argv) {
     int selected[6]={1,1,1,1,1,1},list=0,check=0,lock=-1;const char *selection=getenv("REMORA_RESOURCE_MODULES"),*directory=NULL;
-    if(gethostname(node,sizeof node)) strcpy(node,"unknown");node[sizeof node-1]=0;
+    if(gethostname(node,sizeof node)) strcpy(node,"unknown");
+    node[sizeof node-1]=0;
     int i=1;
     if(argc==4 && argv[1][0]!='-') {legacy=allow_partial=1;fmt(node,sizeof node,"%s",argv[1]);directory=argv[3];i=4;}
     for(;i<argc;i++) {
@@ -577,7 +588,9 @@ int main(int argc,char **argv) {
     for(unsigned j=0;j<device_count;j++) {if(!device_name(devices[j])) return usage();for(unsigned k=0;k<j;k++) if(!strcmp(devices[j],devices[k])) return usage();}
     for(unsigned j=0;j<handle_count;j++) {
         char h[128];if(fmt(h,sizeof h,"%s",handles[j])) return usage();char *colon=strchr(h,':');uint64_t pid,ticks;
-        if(!colon) return usage();*colon=0;if(uint_value(h,&pid) || !pid || pid>INT_MAX || uint_value(colon+1,&ticks)) return usage();
+        if(!colon) return usage();
+        *colon=0;
+        if(uint_value(h,&pid) || !pid || pid>INT_MAX || uint_value(colon+1,&ticks)) return usage();
         for(unsigned k=0;k<j;k++) if(!strcmp(handles[k],handles[j])) return usage();
     }
     if(list) {
@@ -602,5 +615,8 @@ int main(int argc,char **argv) {
     for(unsigned j=0;j<6;j++) if(selected[j]) {
         provider=providers[j];int r=isolated(output);if(r>=128 || r==74) {result=r;break;}if(r) result=allow_partial?0:2;
     }
-    if(output!=stdout && fclose(output)) result=74;if(lock>=0) close(lock);if(state_dir>=0) close(state_dir);return result;
+    if(output!=stdout && fclose(output)) result=74;
+    if(lock>=0) close(lock);
+    if(state_dir>=0) close(state_dir);
+    return result;
 }
