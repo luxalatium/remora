@@ -1,0 +1,118 @@
+--- a/make-wrappers.py
++++ b/make-wrappers.py
+@@ -121,6 +121,10 @@
+     ( "MPI_File_read", "datatype"):2,
+     ( "MPI_File_read_all", "count"):1,
+     ( "MPI_File_read_all", "datatype"):2,
++    ( "MPI_File_read_at_all", "count"):1,
++    ( "MPI_File_read_at_all", "datatype"):2,
++    ( "MPI_File_write_at_all", "count"):1,
++    ( "MPI_File_write_at_all", "datatype"):2,
+     ( "MPI_File_read_at", "count"):1,
+     ( "MPI_File_read_at", "datatype"):2,
+     ( "MPI_File_write", "count"):1,
+@@ -1165,8 +1169,8 @@
+         olist.append( "\n"
+                       + "PMPI_Type_size(*" + fdict[funct].ioTypePname + ", "
+                       + "&tsize);\n"
+-                      + "ioSize = (double)(tsize * *"
+-                      +  fdict[funct].ioCountPname + ");\n")
++                      + "ioSize = (double)tsize * (double)*"
++                      +  fdict[funct].ioCountPname + ";\n")
+ 
+     if fdict[funct].rmaCountPname != "":
+         olist.append( "\n"
+@@ -1445,6 +1449,9 @@
+                 argname = "c_" + i;
+             else:
+                 argname = "&c_" + i;
++        elif (fdict[funct].paramDict[i].basetype in ("void", "mpip_const_void_t")
++              and fdict[funct].paramDict[i].pointerLevel == 1):
++            argname = "mpiPi_fortran_buffer(" + i + ")"
+         elif ( i in stringVarNames ) :
+             argname = "c_" + i;
+         else:
+@@ -1630,6 +1637,8 @@
+     symflist = copy.deepcopy(flist)
+     symflist.append('mpipi_get_fortran_argc')
+     symflist.append('mpipi_get_fortran_arg')
++    symflist.append('mpipi_init_fortran_sentinels')
++    symflist.append('mpipi_register_fortran_sentinels')
+ 
+     g = open(sname, "w")
+     for funct in symflist:
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -63,7 +63,11 @@
+ 	mpiP-API.c \
+ 	${PC_LOOKUP_FILE}
+ 
+-OBJS  = $(SRCS:.c=.o)
++OBJS  = $(SRCS:.c=.o) mpip_fortran_sentinels.o
++
++# Compile constants with the same MPI Fortran wrapper as the application ABI.
++mpip_fortran_sentinels.o: mpip_fortran_sentinels.f
++	$(F77) $(FFLAGS) -c $< -o $@
+ FOBJS = $(OBJS)
+ 
+ API_OBJS = $(API_SRCS:.c=.o)
+--- /dev/null
++++ b/mpip_fortran_sentinels.f
+@@ -0,0 +1,4 @@
++      subroutine mpipi_init_fortran_sentinels()
++      include 'mpif.h'
++      call mpipi_register_fortran_sentinels(MPI_IN_PLACE, MPI_BOTTOM)
++      end
+--- a/mpiPi.c
++++ b/mpiPi.c
+@@ -18,6 +18,32 @@
+ #include <float.h>
+ #include <unistd.h>
+ #include "mpiPi.h"
++
++#ifndef ENABLE_API_ONLY
++#include "symbols.h"
++extern void F77_MPIPI_INIT_FORTRAN_SENTINELS (void);
++static void *mpiPi_f_in_place;
++static void *mpiPi_f_bottom;
++
++void
++F77_MPIPI_REGISTER_FORTRAN_SENTINELS (void *in_place, void *bottom)
++{
++  mpiPi_f_in_place = in_place;
++  mpiPi_f_bottom = bottom;
++}
++
++/* Translate addresses, never dereference a user's choice buffer. */
++void *
++mpiPi_fortran_buffer (const void *buffer)
++{
++  if (buffer == mpiPi_f_in_place)
++    return MPI_IN_PLACE;
++  if (buffer == mpiPi_f_bottom)
++    return MPI_BOTTOM;
++  return (void *) buffer;
++}
++#endif
++
+ 
+ 
+ 
+@@ -85,6 +111,7 @@
+       mpiPi_msg_warn ("Could not get time of day from time()\n");
+     }
+ 
++  F77_MPIPI_INIT_FORTRAN_SENTINELS ();
+   mpiPi.toolname = "mpiP";
+   mpiPi.comm = MPI_COMM_WORLD;
+   mpiPi.tag = 9821;
+--- a/mpiPi.h
++++ b/mpiPi.h
+@@ -35,6 +35,7 @@
+ #if !defined(CEXTRACT) && !defined(ENABLE_API_ONLY)
+ #include <mpi.h>
+ #include "mpiPi_def.h"
++void *mpiPi_fortran_buffer (const void *buffer);
+ #endif
+ 
+ #include "mpiP-hash.h"

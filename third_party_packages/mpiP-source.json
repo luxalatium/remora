@@ -7,5 +7,12 @@
   "archive": "extra/mpiP-3.5.tar.gz",
   "sha256": "e366843d53fa016fb03903e51c8aac901aa5155edabe64698a8d6fa618a03bbd",
   "modification": "None; original release asset bytes retained under the package naming convention",
-  "license": "BSD-style redistribution terms retained inside archive README.md and source files"
+  "license": "BSD-style redistribution terms retained inside archive README.md and source files",
+  "patches": [
+    {
+      "path": "third_party_packages/patches/mpiP-3.5-fortran-io.patch",
+      "sha256": "1a62f30bf6d30de27791f5e830294ff715913df9b0b170ba29952c68bca789bc",
+      "purpose": "Translate Fortran choice-buffer sentinel addresses and account for blocking collective explicit-offset MPI-I/O bytes; original release archive unchanged."
+    }
+  ]
 }

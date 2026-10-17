@@ -31,6 +31,20 @@ mpi_fix_fortran_symbol_probe() {
 
 recipe_prepare() {
     local value
+    MPIP_PATCH_TOOL=$(command -v patch) || {
+        error 'patch is required for the mpiP 3.5 compatibility fixes'
+        return 1
+    }
+    MPIP_PATCH="$ROOT/third_party_packages/patches/mpiP-3.5-fortran-io.patch"
+    local expected
+    expected=$(jq -r '.patches[0].sha256' "$ROOT/third_party_packages/mpiP-source.json")
+    [[ -f $MPIP_PATCH && ! -L $MPIP_PATCH && $(hash_file "$MPIP_PATCH") == "$expected" ]] || {
+        error 'mpiP compatibility patch checksum differs from its provenance'
+        return 1
+    }
+    json_update "$RESULT_FILE" --arg path "$MPIP_PATCH" --arg hash "$expected" \
+        --arg tool "$MPIP_PATCH_TOOL" --arg tool_hash "$(hash_file "$MPIP_PATCH_TOOL")" \
+        '.patches=[{path:$path,sha256:$hash}] | .patch_tool={path:$tool,sha256:$tool_hash}' || return 1
     value=$(jq -r .mpip_python.version "$TOOLS")
     [[ $value == *'Python 3.'* ]] || {
         error 'bundled mpiP 3.5 requires Python 3'
@@ -60,6 +74,10 @@ recipe_prepare() {
 recipe_build() {
     local python cflags fflags cppflags ldflags build_env=()
     mpi_fix_fortran_symbol_probe || return 1
+    run "$SOURCE" "$WORK/logs" mpip-patch-check 60 "$MPIP_PATCH_TOOL" \
+        --dry-run --batch --forward --fuzz=0 -p1 -i "$MPIP_PATCH" || return 1
+    run "$SOURCE" "$WORK/logs" mpip-patch 60 "$MPIP_PATCH_TOOL" \
+        --batch --forward --fuzz=0 -p1 -i "$MPIP_PATCH" || return 1
     python=$(tp_make_flags "$(shell_quote "$(tool_path mpip_python)")") || return 1
     cflags=$(jq -r .flags.cflags "$CONFIG")
     fflags=$(jq -r .flags.fflags "$CONFIG")
