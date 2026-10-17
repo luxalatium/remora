@@ -50,6 +50,12 @@ newline-separated `NODE PID:STARTTIME_TICKS` entries, using exactly the node nam
 passed by REMORA. Only handles for the current node are sampled. Remote PID
 tracking/launcher integration is a separate producer of these handles.
 
+The selected handle exposes Linux process accounting, including I/O accumulated
+from children after they are waited for. It does not isolate the parent's own
+contribution. Selecting both parent and child handles can therefore overlap;
+retain `aggregation: "forbidden"` and do not sum them into a rank or job total.
+See the [Linux `/proc/PID/io` manual](https://man7.org/linux/man-pages/man5/proc_pid_io.5.html).
+
 Both `collect_data_io NODE OUTDIR TMPDIR` and the existing native positional ABI
 `data_collect_io NODE OUTDIR TMPDIR` append to `TMPDIR/io_NODE.jsonl`.
 `init_module_io` validates configuration and creates that file with mode 0600,
@@ -65,7 +71,7 @@ module/native ABI directly rather than the legacy daemon's cleanup routines.
 | `mounts` | `/proc/self/mountinfo`, all visible entries | mount ID, device, root, source, type, mount/super options | collector mount namespace; no usage counter |
 | `capacity` | `statvfs`, `/tmp` by default | total/free/available bytes and inodes | filesystem capacity visible to caller; **not a user/job quota** |
 | `nfs` | `/proc/self/mountstats`, visible NFS/NFS4 mounts | logical/direct/server bytes, pages, per-operation RPC counts/times, raw transports | node client mount; includes other traffic in that domain |
-| `process` | `/proc/PID/stat` and `/proc/PID/io`, explicit handles only | rchar/wchar, syscr/syscw, storage read/write/cancelled bytes | that PID lifetime; no child/rank/job total |
+| `process` | `/proc/PID/stat` and `/proc/PID/io`, explicit handles only | rchar/wchar, syscr/syscw, storage read/write/cancelled bytes | Linux process accounting for that PID lifetime, including waited-for children; not a disjoint rank/job total |
 | `block` | `/proc/diskstats`, explicit devices or selected paths (default `/tmp`) | read/write/discard/flush counts, sectors, time, in-flight gauge | node block device; other processes may contribute |
 | `tmp` | mount mapping + `statvfs`, `/tmp` and `/dev/shm` | capacity, bind root/options, memory-backed tmpfs flag | filesystem; no claim of job-private storage or quota |
 
