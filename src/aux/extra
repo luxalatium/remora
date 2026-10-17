@@ -28,7 +28,7 @@ usage() { printf '\033[0;33m REMORA Howto\n\033[0m'; head -${SCRIPT_HEADSIZE:-99
 usagefull() { head -${SCRIPT_HEADSIZE:-99} ${0} | grep -e "^#[%+-]" | sed -e "s/^#[%+-]//g" -e "s/\${SCRIPT_NAME}/${SCRIPT_NAME}/g" ; }
 write_resource_environment() {
     local resource_key
-    for resource_key in REMORA_RESOURCE_MODULES REMORA_RESOURCE_PATHS REMORA_RESOURCE_TIMEOUT REMORA_RESOURCE_PROCESS_HANDLES REMORA_RESOURCE_DEVICES; do
+    for resource_key in REMORA_ETH_INTERFACES REMORA_IB_PORTS REMORA_OPA_PORTS REMORA_RESOURCE_MODULES REMORA_RESOURCE_PATHS REMORA_RESOURCE_TIMEOUT REMORA_RESOURCE_PROCESS_HANDLES REMORA_RESOURCE_DEVICES; do
         if [[ ${!resource_key+x} ]]; then
             printf 'export %s=%q\n' "$resource_key" "${!resource_key}" >> "$1" || return 1
         fi
@@ -467,7 +467,7 @@ init_folders() {
 
     echo "export REMORA_OUTDIR=$REMORA_OUTDIR"  > $REMORA_OUTDIR/remora_env.txt
     echo "export REMORA_TMPDIR=$REMORA_TMPDIR" >> $REMORA_OUTDIR/remora_env.txt
-    # Fixed opt-in IO settings survive the existing remote collector environment.
+    # Fixed resource selectors survive the existing remote collector environment.
     # Quote as shell literals; paths/handles are data, never executable fragments.
     write_resource_environment "$REMORA_OUTDIR/remora_env.txt" || return 1
 

@@ -34,6 +34,10 @@ Use a fresh TMPDIR for a new run/revision. New sidecars identify this contract.
   fabric selection still requires ACTIVE InfiniBand and the module's family.
   Missing/down explicit entities fail; they are never silently substituted.
 
+The three selection variables are safely quoted into remora_env.txt so remote
+collector shells receive the same exact values, including explicitly empty
+(invalid) selections. The development sysfs-root override is not forwarded.
+
 Both the shell module and direct collector use the installed native reader.
 REMORA_BINARIES=0 remains a supported module entry path, using the same reader
 for exact unsigned arithmetic and identical selection. Network modules therefore
