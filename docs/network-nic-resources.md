@@ -94,6 +94,12 @@ See [PFC live acceptance](network-pfc-validation.md) for exact selectors, three
 repetitions per Bash/native path, uint64 brackets and separate enabled/mapping
 claims. Optional configuration-query failures retain explicit SKIP reasons.
 
+For standard pause settings, configured/active FEC modes and standard
+aggregate/per-lane FEC statistics, use the independent default-off `netpause`
+and `netfec` modules. See [standard ethtool contract](network-ethtool-resources.md).
+Their availability is separate from driver-native linkhealth counters; neither
+counter zeros nor missing per-lane arrays prove mode or lane link state.
+
 Field definitions follow. Definitions are capability candidates; availability
 must be established on the specific node/driver/kernel. Site observations belong
 in a separately versioned evidence catalog.

@@ -165,3 +165,22 @@ Save command/stdout/stderr/rc for CLI failures too. API/attribute/transport SKIP
 is a data support result, separate from test harness PASS. Never enable PFC,
 change mapping or infer per-priority traffic from shared TC/PB counters to test
 this read-only module. See [contract](../docs/network-dcb-resources.md).
+
+## Standard ethtool pause / FEC cases
+
+`test_network_ethtool.py` is included in the standard `test_network*.py` suite.
+It tests separate configured/active FEC meanings, legacy ioctl-vs-linkmode masks,
+FEC_NONE-vs-Off, nonzero boolean normalization with raw preservation, uint64
+bits/blocks/frames, port total at array0 and lane0 at array1, aggregate-only/empty/
+missing and unequal lane arrays, exact selectors/DOWN/IPoIB, malformed framing/
+bitsets/attributes/identity, unsupported/denied/timeout, safe outputs/signals and
+native/Bash/real worker hooks. Denial/malformed/timeout must not invoke fallback.
+No per-lane link-up/down field is invented where standard FEC GET has none.
+
+`network_ethtool_live.py` runs three C/Bash samples per module/interface, records
+independent `ethtool -a`, `--show-fec` and `-I` before/after oracles, checks raw
+netlink/ioctl values and meanings, per-field missingness, rootless capabilities,
+and finalizer hashes. Preserve GET failures and explicit oracle/per-lane SKIP too.
+Fixtures are not hardware support; per-lane breakdown needs actual driver arrays.
+See [resource contract](../docs/network-ethtool-resources.md). All Python here is
+development-only; installed collection uses Bash/C without ethtool CLI/library.

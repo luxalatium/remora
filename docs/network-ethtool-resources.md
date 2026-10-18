@@ -32,8 +32,9 @@ FEC configuration support, distinct from FEC_OFF; do not label NONE as Off.
 Netlink active indexes0..4095 are preserved, without inventing Off for unknown.
 FEC auto-selection is not link autonegotiation. Configuration/auto are meaningful
 when link autonegotiation is disabled; collection does not assert that condition.
-Pause RX/TX/autoneg are reported GET settings, not proof of negotiated wire
-behavior; global pause is distinct from PFC. FEC mode does not prove lane health.
+Pause autoneg is pause-specific and must not be substituted for link autoneg
+when interpreting FEC configuration. Pause RX/TX/autoneg are reported GET
+settings, not proof of negotiated wire behavior; global pause is distinct from PFC. FEC mode does not prove lane health.
 
 FEC statistics entry0 is the port total, followed by lane/PCS-instance entries
 numbered0..N-1. Never call entry0 lane0, sum total plus lanes, infer optical lane
