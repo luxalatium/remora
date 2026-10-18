@@ -146,3 +146,12 @@ data_collect_linkhealth: data_collect_linkhealth.o
 	$(CC) $< -o $(BUILD_DIR)/$@
 
 data_collect_nicstats.o data_collect_linkhealth.o: remora_nicstats.h remora_nicfields.h
+
+# Read-only DCB configuration snapshot, no privileged setters.
+OBJECTS += data_collect_netdcb.o
+BINARIES += data_collect_netdcb
+all: data_collect_netdcb
+data_collect_netdcb: data_collect_netdcb.o
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $< -o $(BUILD_DIR)/$@
+data_collect_netdcb.o: remora_netdcb.h

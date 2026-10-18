@@ -161,6 +161,12 @@
       "requires": [],
       "entry": "nicstats,NETWORK"
     },
+    "netdcb": {
+      "default": "off",
+      "kind": "collector",
+      "requires": [],
+      "entry": "netdcb,NETWORK"
+    },
     "linkhealth": {
       "default": "off",
       "kind": "collector",

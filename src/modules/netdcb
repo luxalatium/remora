@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Read-only DCB configuration; C collector, no Python runtime.
+init_module_netdcb() { "$REMORA_BIN/binary_data_collectors/data_collect_netdcb" "$1" "$2" "$3" --check; }
+collect_data_netdcb() { "$REMORA_BIN/binary_data_collectors/data_collect_netdcb" "$1" "$2" "$3"; }
+process_data_netdcb() { :; }
+plot_data_netdcb() { :; }
+monitor_data_netdcb() { :; }
+finalize_module_netdcb() { :; }
