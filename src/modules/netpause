@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Read-only standard ethtool data; C collector, no Python runtime.
+init_module_netpause() { "$REMORA_BIN/binary_data_collectors/data_collect_netpause" "$1" "$2" "$3" --check; }
+collect_data_netpause() { "$REMORA_BIN/binary_data_collectors/data_collect_netpause" "$1" "$2" "$3"; }
+process_data_netpause() { :; }
+plot_data_netpause() { :; }
+monitor_data_netpause() { :; }
+finalize_module_netpause() { :; }

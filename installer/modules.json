@@ -161,6 +161,18 @@
       "requires": [],
       "entry": "nicstats,NETWORK"
     },
+    "netpause": {
+      "default": "off",
+      "kind": "collector",
+      "requires": [],
+      "entry": "netpause,NETWORK"
+    },
+    "netfec": {
+      "default": "off",
+      "kind": "collector",
+      "requires": [],
+      "entry": "netfec,NETWORK"
+    },
     "netdcb": {
       "default": "off",
       "kind": "collector",

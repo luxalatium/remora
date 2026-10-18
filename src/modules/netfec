@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Read-only standard ethtool data; C collector, no Python runtime.
+init_module_netfec() { "$REMORA_BIN/binary_data_collectors/data_collect_netfec" "$1" "$2" "$3" --check; }
+collect_data_netfec() { "$REMORA_BIN/binary_data_collectors/data_collect_netfec" "$1" "$2" "$3"; }
+process_data_netfec() { :; }
+plot_data_netfec() { :; }
+monitor_data_netfec() { :; }
+finalize_module_netfec() { :; }

@@ -155,3 +155,15 @@ data_collect_netdcb: data_collect_netdcb.o
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $< -o $(BUILD_DIR)/$@
 data_collect_netdcb.o: remora_netdcb.h
+
+# Read-only standard Ethernet pause/FEC resources.
+OBJECTS += data_collect_netpause.o data_collect_netfec.o
+BINARIES += data_collect_netpause data_collect_netfec
+all: data_collect_netpause data_collect_netfec
+data_collect_netpause: data_collect_netpause.o
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $< -o $(BUILD_DIR)/$@
+data_collect_netfec: data_collect_netfec.o
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $< -o $(BUILD_DIR)/$@
+data_collect_netpause.o data_collect_netfec.o: remora_ethtool.h
