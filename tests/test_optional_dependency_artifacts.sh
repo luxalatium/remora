@@ -27,6 +27,8 @@ check() {
 check legacy PASS mpip '{"artifacts":{"lib/libmpiP.a":"hash","lib/libmpiP.so":"hash"}}'
 check explicit_empty PASS mpip '{"optional_artifacts":[],"artifacts":{"lib/libmpiP.a":"hash","lib/libmpiP.so":"hash"}}'
 check native_f08 PASS mpip '{"optional_artifacts":["lib/libmpiP-f08.a"],"artifacts":{"lib/libmpiP.a":"hash","lib/libmpiP.so":"hash","lib/libmpiP-f08.a":"hash"}}'
+check native_f08_reference PASS mpip '{"optional_artifacts":["lib/libmpiP-f08.a","lib/libmpiP-f08-pcontrol.a"],"artifacts":{"lib/libmpiP.a":"hash","lib/libmpiP.so":"hash","lib/libmpiP-f08.a":"hash","lib/libmpiP-f08-pcontrol.a":"hash"}}'
+check missing_pcontrol_reference FAIL mpip '{"optional_artifacts":["lib/libmpiP-f08.a","lib/libmpiP-f08-pcontrol.a"],"artifacts":{"lib/libmpiP.a":"hash","lib/libmpiP.so":"hash","lib/libmpiP-f08.a":"hash"}}'
 check missing_required FAIL mpip '{"artifacts":{"lib/libmpiP.a":"hash"}}'
 check missing_selected FAIL mpip '{"optional_artifacts":["lib/libmpiP-f08.a"],"artifacts":{"lib/libmpiP.a":"hash","lib/libmpiP.so":"hash"}}'
 check unknown_file FAIL mpip '{"artifacts":{"lib/libmpiP.a":"hash","lib/libmpiP.so":"hash","lib/unknown.a":"hash"}}'

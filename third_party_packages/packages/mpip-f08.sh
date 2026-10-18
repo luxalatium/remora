@@ -160,22 +160,28 @@ FORTRAN
     run "$directory" "$WORK/logs" mpip-f08-lifecycle 120 "$(tool_path mpicc)" \
         "${c_flags[@]}" -I"$directory" -c "$support/lifecycle.c" -o lifecycle.o || return 1
 
+    run "$directory" "$WORK/logs" mpip-f08-pcontrol 120 "$(tool_path mpicc)" \
+        "${c_flags[@]}" -I"$directory" -c "$support/pcontrol.c" -o mpip-f08-pcontrol.o || return 1
+    run "$directory" "$WORK/logs" mpip-f08-pcontrol-reference 60 "$ar_tool" \
+        crs libmpiP-f08-pcontrol.a mpip-f08-pcontrol.o || return 1
+
     # Keep one set of mpiP globals and lifecycle symbols in each library.
     # A dependent sidecar shared library can resolve MPI_Init to the MPI vendor
     # while resolving statistics to mpiP, leaving the latter uninitialized.
     run "$directory" "$WORK/logs" mpip-f08-shared 120 "$compiler" \
-        "${fortran_flags[@]}" -shared -o libmpiP.so f08.o stats.o lifecycle.o \
+        "${fortran_flags[@]}" -shared -o libmpiP.so f08.o stats.o lifecycle.o mpip-f08-pcontrol.o \
         -Wl,--whole-archive "$SOURCE/libmpiP.a" -Wl,--no-whole-archive \
         "${link_flags[@]}" -ldl -lm -lpthread -lrt || return 1
     cp -p -- "$SOURCE/libmpiP.a" "$directory/libmpiP-f08.a" || return 1
     run "$directory" "$WORK/logs" mpip-f08-static 60 "$ar_tool" \
-        r libmpiP-f08.a f08.o stats.o lifecycle.o || return 1
-    cp -p -- "$directory/libmpiP-f08.a" "$directory/libmpiP.so" "$STAGE/lib/" || return 1
+        r libmpiP-f08.a f08.o stats.o lifecycle.o mpip-f08-pcontrol.o || return 1
+    cp -p -- "$directory/libmpiP-f08.a" "$directory/libmpiP-f08-pcontrol.a" \
+        "$directory/libmpiP.so" "$STAGE/lib/" || return 1
     json_update "$RESULT_FILE" --arg abi "$selected" --arg subarrays "$subarrays" \
         --arg nm "$nm_tool" --arg nm_hash "$(hash_file "$nm_tool")" \
         --arg objcopy "$objcopy_tool" --arg objcopy_hash "$(hash_file "$objcopy_tool")" \
         --arg ar "$ar_tool" --arg ar_hash "$(hash_file "$ar_tool")" \
         --rawfile mapping "$directory/renames.txt" \
-        '.fortran_f08={status:"BUILT",buffer_abi:$abi,mpi_subarrays_supported:($subarrays=="yes"),symbol_mapping:$mapping,build_tools:{nm:{path:$nm,sha256:$nm_hash},objcopy:{path:$objcopy,sha256:$objcopy_hash},ar:{path:$ar,sha256:$ar_hash}},static_library:"libmpiP-f08.a",static_linker:"configured MPI Fortran wrapper",runtime:"NOT_RUN",coverage:"listed native adapter routines plus scalar lifecycle/Pcontrol; other F08 APIs are not qualified"} | .optional_artifacts=["lib/libmpiP-f08.a"]' || return 1
+        '.fortran_f08={status:"BUILT",buffer_abi:$abi,mpi_subarrays_supported:($subarrays=="yes"),symbol_mapping:$mapping,build_tools:{nm:{path:$nm,sha256:$nm_hash},objcopy:{path:$objcopy,sha256:$objcopy_hash},ar:{path:$ar,sha256:$ar_hash}},static_library:"libmpiP-f08.a",unprofiled_pcontrol_library:"libmpiP-f08-pcontrol.a",static_linker:"configured MPI Fortran wrapper",runtime:"NOT_RUN",coverage:"listed native adapter routines plus scalar lifecycle/Pcontrol; other F08 APIs are not qualified"} | .optional_artifacts=["lib/libmpiP-f08.a","lib/libmpiP-f08-pcontrol.a"]' || return 1
     printf '[third-party] Built native mpi_f08 adapters (%s buffers; runtime NOT_RUN)\n' "$selected"
 }

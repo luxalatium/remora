@@ -90,7 +90,12 @@ the workaround does not repair the site's MPI module.
 
 The case runner retains its 25-second timeout. At 20 seconds it records only
 matching rank PID/start/node/UID identities from that case's WORKER lines,
-including Linux process state and wchan/status. It never enumerates or signals
+including Linux process state, wchan/status and optional syscall/stack snapshots.
+The additional proc reads recheck owner and start identity; access denial or
+a vanished process is retained as stderr, never treated as a zero measurement.
+Each proc read has a one-second timeout and the snapshot loop has a three-second
+budget, retaining partial files if the budget expires. These files are diagnosis
+evidence, not proof of MPI correctness. It never enumerates or signals
 unrelated processes. The caller remains responsible for exact-worker cleanup.
 An intentional sleep timeout validates this diagnostic path; it is not a
 reproduction or root-cause proof of an earlier Horizon shutdown failure.
@@ -108,3 +113,13 @@ Pcontrol through the MPI C binding in the unprofiled reference. Keep profiler
 preload/static cases on the original F08 binding. Label this comparison with
 its binding variance; it does not turn the original native baseline into PASS
 or establish that the vendor F08 entry is repaired.
+
+A native F08 Pcontrol ABI defect can also be isolated without changing the
+application's F08 call: link `libmpiP-f08-pcontrol.a` for the unprofiled compatibility
+reference. Keep the original unmodified native result separately. Validate
+levels 0–3, correct application results and cleanup, then compare original-F08
+preload/full-static statistics. The compatibility archive itself contains no
+profiler; an explicit compatibility reference must not be labeled native PASS.
+Application-only preload on that linked reference must still control mpiP's C
+Pcontrol path. Do not use the compatibility archive together with a whole-archive
+full F08 static library.

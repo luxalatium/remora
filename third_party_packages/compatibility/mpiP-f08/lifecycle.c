@@ -28,8 +28,3 @@ void MPIP_F08_FINALIZE(int *ierror)
     if (ierror != NULL)
         *ierror = result;
 }
-
-void MPIP_F08_PCONTROL(int *level)
-{
-    MPI_Pcontrol(*level);
-}

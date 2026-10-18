@@ -44,3 +44,21 @@ site module's rejected scalar MPI_IN_PLACE overload: a rank-one Fortran pointer
 aliases the actual sentinel through C_LOC/C_F_POINTER. Its value is never copied.
 This is a fixture/application workaround, not a replacement for the site's MPI
 module or a claim that its original scalar overload compiles.
+
+For an unprofiled F08 reference on a vendor with a broken Pcontrol tail-call ABI,
+link the separately built `libmpiP-f08-pcontrol.a` before the vendor MPI libraries:
+
+```bash
+mpifc application.o /prefix/lib/libmpiP-f08-pcontrol.a -o application-reference
+```
+
+This archive contains only the compiler-probed scalar F08 Pcontrol bridge. It
+calls the C `MPI_Pcontrol` binding through a properly declared variadic prototype,
+letting the C compiler generate the platform calling convention (including AMD64
+AL). It has no mpiP initialization, counters or reporting. The application's F08
+call remains unchanged; this is an explicitly linked compatibility reference,
+not a repaired vendor library or a native unmodified baseline PASS. An
+application-only mpiP preload still intercepts the C call. For full F08 static
+profiling use `libmpiP-f08.a` alone; do not whole-archive both libraries, which
+would define the same Pcontrol object twice. Only the standard level argument is
+covered; vendor extensions or extra arguments are not qualified.

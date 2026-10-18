@@ -61,7 +61,8 @@ bash third_party_packages/install.sh build --package mpip --config config.json -
 ```
 
 These commands stage only the dependency's `bin/mpstat` or `lib/libmpiP.a` and
-`lib/libmpiP.so`, plus the declared optional `lib/libmpiP-f08.a` when native F08
+`lib/libmpiP.so`, plus the declared optional `lib/libmpiP-f08.a` and scalar-reference
+`lib/libmpiP-f08-pcontrol.a` when native F08
 adapters are built. The main REMORA installer remains the sole publisher of the
 final package prefix. The child may be used without loading REMORA's CLI.
 Package recipes and tool requirements are declared in `packages.json` and
