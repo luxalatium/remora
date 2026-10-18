@@ -19,8 +19,8 @@ other transports. Explicit non-Ethernet selections remain UNSUPPORTED with
 
 Numeric values are exact decimal strings; boolean values are "0"/"1".
 PFC cap is the reported number of traffic classes that can simultaneously
-support PFC, not a priority count. ETS cap zero has the UAPI meaning of eight
-classes; the raw zero is retained. Mapping indexes must be 0..7; they are not
+support PFC, not a priority count. ETS cap is retained exactly as the driver reports it, including zero; the
+collector does not reinterpret zero as a class count. Mapping indexes must be 0..7; they are not
 validated against reported cap because a driver may report inactive mappings.
 Priority numbers refer to 802.1p priorities. This is current network namespace
 netdev configuration, not a job resource or a traffic counter. Multiple priorities
@@ -52,3 +52,18 @@ Standard validation: tests/test_network_dcb.py adversarial wire/output/lifecycle
 fixtures; tests/network_dcb_live.py independent dcb PFC/ETS before/after oracle,
 three repetitions through C and Bash, explicit per-interface support and SKIP.
 Development test drivers may use Python; installed collector/modules do not.
+
+To pair configuration with existing linkhealth counters, enable both opt-in
+modules in the installer configuration. Select exact interfaces only after
+checking the current node's netinfo output, for example:
+
+```bash
+export REMORA_ETH_INTERFACES=eno1,eno2
+"$REMORA_BIN/binary_data_collectors/data_collect_netdcb" "$HOSTNAME" "$OUTDIR" "$TMPDIR"
+```
+
+Re-read configuration when a sample matters; this module does not assert that
+configuration stays unchanged between samples or that PFC is active on the link.
+References: [iproute2 PFC](https://man7.org/linux/man-pages/man8/dcb-pfc.8.html),
+[iproute2 ETS](https://man7.org/linux/man-pages/man8/dcb-ets.8.html), and the target
+system's retained `/usr/include/linux/dcbnl.h` in qualification evidence.

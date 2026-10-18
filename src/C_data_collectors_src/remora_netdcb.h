@@ -250,7 +250,7 @@ static int dc_query(struct nc_device *d) {
 static int dc_query(struct nc_device *d) {
  d->sequence=77;const char *wait=getenv("REMORA_DCB_TEST_WAIT");
  if(wait) {int fd=open(wait,O_WRONLY|O_CREAT|O_EXCL,0600);if(fd>=0) close(fd);for(;;) pause();}
- char path[1024];snprintf(path,sizeof path,"%s/class/net/%s/reply",nc_sys,d->name);
+ char path[1024];snprintf(path,sizeof path,"%.700s/class/net/%.15s/reply",nc_sys,d->name);
  int fd=open(path,O_RDONLY);if(fd<0) return errno;
  ssize_t n=read(fd,d->response,DC_BYTES);int e=n<0?errno:0;close(fd);if(e) return e;
  d->received_len=d->response_len=(size_t)n;
