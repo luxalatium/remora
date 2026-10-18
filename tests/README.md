@@ -141,3 +141,27 @@ and binary hashes. Record SKIP reasons per field/interface; one readable
 interface does not establish support for every interface or every feature.
 Hardlink fixture creation denial is a filesystem SKIP; never weaken the guard.
 Formal overhead, full legacy wrapper and multinode qualification remain separate.
+
+## DCB configuration resource standard
+
+`test_network_dcb.py` runs portable C wire fixtures and Bash/native lifecycle
+checks for the opt-in `netdcb` resource. Include it with the existing standard
+`python3 -B -m unittest discover -s tests -p 'test_network*.py'` command.
+
+| Case group | Required result |
+| --- | --- |
+| Nonzero mask, disabled PFC, nonidentity and shared TC mappings | Exact 19 configuration strings, correct units/scope; zero stays readable |
+| PFC-only / ETS-only / neither exposed | Independent group availability; absent values null, never fabricated zero |
+| Malformed/truncated/duplicate attributes, wrong interface/sequence/kernel peer, invalid cap/TC | Exit74; received raw retained; all affected interpreted values null |
+| Kernel denial / unsupported / absent / timeout | Distinct errno/status;69 only optional unavailable,74 hard errors |
+| UP/DOWN discovery, exact selectors, IPoIB, limits | Stable sorted selection; explicit inapplicable transport SKIP; no name inference |
+| Symlink/hardlink/FIFO/lock/incomplete/pending, SIGTERM, finalize | Safe fail-closed output;75 lock contention; no raw cleanup or unrelated process signals |
+| Native / Bash / real runtime worker, default-off registry | Same field contract and availability; no fixture backend in installed C binary |
+
+`network_dcb_live.py` is a development-only oracle: three independent samples
+per native/Bash path per interface, raw netlink decode plus before/after
+`dcb -j pfc/ets show` when supported, source/config identity and finalizer hashes.
+Save command/stdout/stderr/rc for CLI failures too. API/attribute/transport SKIP
+is a data support result, separate from test harness PASS. Never enable PFC,
+change mapping or infer per-priority traffic from shared TC/PB counters to test
+this read-only module. See [contract](../docs/network-dcb-resources.md).

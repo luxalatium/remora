@@ -24,7 +24,10 @@ eight priority flags and priority-to-TC configuration against before/after DCB
 CLI observations, with interface-index stability checks. The native request and
 indication arrays remain decimal uint64 strings indexed as returned by the
 driver; they are not renamed to per-priority traffic counters. This is a
-development verifier, not an installed resource module.
+development verifier. The default-off production `netdcb` Bash/C resource
+module now collects PFC enable and priority-to-TC configuration directly; see
+[its contract](network-dcb-resources.md). The diagnostic remains a separate
+independent test, and its frame arrays are not netdcb configuration fields.
 
 A readable enable mask of zero proves the observed configuration has all eight
 priorities disabled. A many-to-one priority-to-TC mapping cannot separate
