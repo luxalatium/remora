@@ -431,6 +431,9 @@ build_plan() {
     PHASE=build
     [[ ! -e $WORK && ! -L $WORK ]] || fatal 'build already attempted; configure a new build directory'
     mkdir -- "$WORK" || fatal 'cannot create build directory'
+    # Build reuses verified tools, but need() also reads per-phase failure state.
+    FAILURES="$WORK/tool-failures.json"
+    printf '{}\n' > "$FAILURES" || fatal 'cannot initialize tool failure state'
     THIRD_PARTY_RESULTS="$WORK/third_party_packages.json"
     printf '{}\n' > "$THIRD_PARTY_RESULTS" || fatal 'cannot initialize dependency receipts'
     stage="$WORK/stage"

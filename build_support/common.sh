@@ -321,7 +321,7 @@ platform_check() {
 
 need() {
     local name=$1 requested path version hash target backend first backend_path saved index option
-    saved=$(jq -r --arg k "$name" '.[$k] // empty' "$FAILURES")
+    saved=$(jq -r --arg k "$name" '.[$k] // empty' "$FAILURES") || return 1
     [[ -z $saved ]] || {
         error "$saved"
         return 1
